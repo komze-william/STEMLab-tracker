@@ -11,56 +11,49 @@
   <!-- Firebase SDK -->
   <script type="module" id="firebase-init">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // ─── PASTE YOUR FIREBASE CONFIG HERE ───────────────────────
-    // 1. Go to https://console.firebase.google.com
-    // 2. Create a project → Add Web App → Copy the config below
-      const firebaseConfig = {
-    apiKey: "AIzaSyAY-tnhdXOuYYAqTxLuKItBxEZxupGbgBk",
-    authDomain: "stemlab-237.firebaseapp.com",
-    projectId: "stemlab-237",
-    storageBucket: "stemlab-237.firebasestorage.app",
-    messagingSenderId: "562445470033",
-    appId: "1:562445470033:web:943509170fbe9334dc6b70",
-    measurementId: "G-63GQYZ924Z"
-  };
-    // ───────────────────────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyAY-tnhdXOuYYAqTxLuKItBxEZxupGbgBk",
+      authDomain: "stemlab-237.firebaseapp.com",
+      projectId: "stemlab-237",
+      storageBucket: "stemlab-237.firebasestorage.app",
+      messagingSenderId: "562445470033",
+      appId: "1:562445470033:web:943509170fbe9334dc6b70"
+    };
 
-    const CONFIGURED = !firebaseConfig.apiKey.includes('PASTE');
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+    await signInAnonymously(auth).catch(console.error);
 
-    let app, db, auth;
-    if (CONFIGURED) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-      auth = getAuth(app);
-      signInAnonymously(auth).catch(console.error);
+    // ONE document per concern — simpler and race-condition-free
+    const APP_DOC  = doc(db, 'stemlab', 'appdata');  // courses, ambassadors, etc.
+    const AUTH_DOC = doc(db, 'stemlab', 'auth');     // founder password hash
+
+    async function writeAppField(field, value) {
+      try { await setDoc(APP_DOC, { [field]: value }, { merge: true }); }
+      catch(e) { console.error('writeAppField', field, e); }
+    }
+    async function readAppData() {
+      try { const s = await getDoc(APP_DOC); return s.exists() ? s.data() : {}; }
+      catch(e) { console.error('readAppData', e); return {}; }
+    }
+    function listenAppData(cb) {
+      return onSnapshot(APP_DOC, s => cb(s.exists() ? s.data() : {}),
+        e => console.error('listenAppData', e));
+    }
+    async function writeAuthField(field, value) {
+      try { await setDoc(AUTH_DOC, { [field]: value }, { merge: true }); }
+      catch(e) { console.error('writeAuthField', e); }
+    }
+    async function readAuthDoc() {
+      try { const s = await getDoc(AUTH_DOC); return s.exists() ? s.data() : {}; }
+      catch(e) { console.error('readAuthDoc', e); return {}; }
     }
 
-    // ── DB HELPERS ──────────────────────────────────────────────
-    async function dbWrite(docId, data) {
-      if (!db) return;
-      try { await setDoc(doc(db, 'stemlab', docId), data); } catch(e) { console.error('dbWrite', e); }
-    }
-
-    async function dbRead(docId) {
-      if (!db) return null;
-      try {
-        const snap = await getDoc(doc(db, 'stemlab', docId));
-        return snap.exists() ? snap.data() : null;
-      } catch(e) { console.error('dbRead', e); return null; }
-    }
-
-    function dbListen(docId, callback) {
-      if (!db) return () => {};
-      return onSnapshot(doc(db, 'stemlab', docId), snap => {
-        if (snap.exists()) callback(snap.data());
-      });
-    }
-
-    // Expose to global scope for React (Babel transforms don't support ESM imports)
-    window.__stemlab_db = { dbWrite, dbRead, dbListen, isConfigured: CONFIGURED };
+    window.__stemlab_db = { writeAppField, readAppData, listenAppData, writeAuthField, readAuthDoc, isConfigured: true };
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
   <style>
@@ -415,7 +408,8 @@
     .tag-active { background:rgba(46,125,50,0.2); color:#81C784; }
     .tag-inactive { background:rgba(200,40,40,0.2); color:#EF9A9A; }
     .tag-course-inactive { background:rgba(200,40,40,0.2); color:#EF9A9A; font-size:9px; padding:1px 6px; margin-left:6px; }
-  
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     .sync-banner { position:fixed; bottom:12px; right:12px; z-index:300; display:flex; align-items:center; gap:8px;
       background:var(--surf2); border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:11px; color:var(--muted);
       box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:opacity 0.4s; pointer-events:none; }
@@ -574,7 +568,7 @@ function parseHash() {
 // SYNC STATUS — global observable for sync banner
 // ============================================================
 const _syncListeners = new Set();
-let _syncStatus = 'local'; // 'local' | 'connected' | 'syncing'
+let _syncStatus = 'syncing';
 function setSyncStatus(s) { _syncStatus = s; _syncListeners.forEach(fn => fn(s)); }
 function useSyncStatus() {
   const [s, setS] = useState(_syncStatus);
@@ -583,54 +577,84 @@ function useSyncStatus() {
 }
 
 // ============================================================
-// CUSTOM HOOK — useFirestore (replaces useLocalStorage)
-// • If Firebase is configured: reads/writes to Firestore in real-time
-// • Falls back to localStorage if Firebase is not configured yet
+// GLOBAL STORE — single source of truth, synced with Firestore
+// All app state lives here. One Firestore listener updates everything.
 // ============================================================
-function useFirestore(key, initial) {
-  const [val, setVal] = useState(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      return stored !== null ? JSON.parse(stored) : initial;
-    } catch { return initial; }
-  });
-  const [fbReady, setFbReady] = useState(!!window.__stemlab_db?.isConfigured);
+const DEFAULT_STORE = {
+  stemlab_v2_ambassadors: [],
+  stemlab_v2_courses: [],
+  stemlab_audit: [],
+  stemlab_leaderboard: true,
+  stemlab_semester: { id: 'SEM-2025-S1', label: 'Semester 1 — 2025/2026', startDate: new Date().toLocaleDateString('en-GB'), status: 'active' },
+  stemlab_history: [],
+  stemlab_visits: [],
+  stemlab_last_backup: null,
+};
 
-  // Wait for Firebase to initialise if it isn't yet
+// In-memory store — starts from localStorage, then gets overwritten by Firestore
+const _store = (() => {
+  const s = { ...DEFAULT_STORE };
+  for (const key of Object.keys(s)) {
+    try { const v = localStorage.getItem(key); if (v !== null) s[key] = JSON.parse(v); } catch {}
+  }
+  return s;
+})();
+
+const _storeListeners = {}; // key -> Set of setState functions
+
+function _notifyKey(key, value) {
+  (_storeListeners[key] || new Set()).forEach(fn => fn(value));
+}
+
+// Called once when Firebase data arrives — overwrites local state
+function _applyFirestoreData(data) {
+  for (const key of Object.keys(DEFAULT_STORE)) {
+    if (data[key] !== undefined) {
+      _store[key] = data[key];
+      try { localStorage.setItem(key, JSON.stringify(data[key])); } catch {}
+      _notifyKey(key, data[key]);
+    }
+  }
+  setSyncStatus('connected');
+}
+
+// Start the single Firestore listener as soon as Firebase is ready
+function _startFirebaseListener() {
+  if (!window.__stemlab_db?.isConfigured) return;
+  setSyncStatus('syncing');
+  window.__stemlab_db.listenAppData(_applyFirestoreData);
+}
+
+if (window.__stemlab_db?.isConfigured) {
+  _startFirebaseListener();
+} else {
+  window.addEventListener('firebase-ready', _startFirebaseListener, { once: true });
+}
+
+// ============================================================
+// CUSTOM HOOK — useLocalStorage (now backed by unified Firestore store)
+// Drop-in replacement — components just call useLocalStorage(key, default)
+// ============================================================
+function useLocalStorage(key, initial) {
+  const [val, setVal] = useState(() => _store[key] !== undefined ? _store[key] : initial);
+
+  // Subscribe to changes from Firestore listener
   useEffect(() => {
-    const handler = () => setFbReady(!!window.__stemlab_db?.isConfigured);
-    window.addEventListener('firebase-ready', handler);
-    return () => window.removeEventListener('firebase-ready', handler);
-  }, []);
+    if (!_storeListeners[key]) _storeListeners[key] = new Set();
+    _storeListeners[key].add(setVal);
+    return () => _storeListeners[key].delete(setVal);
+  }, [key]);
 
-  // Real-time listener from Firestore
-  useEffect(() => {
-    if (!fbReady || !window.__stemlab_db?.isConfigured) return;
-    setSyncStatus('connected');
-    const unsub = window.__stemlab_db.dbListen('appdata', (data) => {
-      if (data && data[key] !== undefined) {
-        setVal(data[key]);
-        try { localStorage.setItem(key, JSON.stringify(data[key])); } catch {}
-      }
-    });
-    return unsub;
-  }, [fbReady, key]);
-
-  // Write back to Firestore + localStorage whenever value changes
   const setAndSync = useCallback((updater) => {
     setVal(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Always persist locally as backup
+      _store[key] = next;
       try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
-      // Persist to Firestore if configured
       if (window.__stemlab_db?.isConfigured) {
         setSyncStatus('syncing');
-        window.__stemlab_db.dbRead('appdata').then(existing => {
-          const merged = { ...(existing || {}), [key]: next };
-          window.__stemlab_db.dbWrite('appdata', merged)
-            .then(() => setSyncStatus('connected'))
-            .catch(() => setSyncStatus('local'));
-        }).catch(() => setSyncStatus('local'));
+        window.__stemlab_db.writeAppField(key, next)
+          .then(() => setSyncStatus('connected'))
+          .catch(() => setSyncStatus('connected')); // don't show error to user
       }
       return next;
     });
@@ -638,9 +662,6 @@ function useFirestore(key, initial) {
 
   return [val, setAndSync];
 }
-
-// Keep the old name as alias so nothing else breaks
-const useLocalStorage = useFirestore;
 
 // ============================================================
 // MODAL — Reusable overlay wrapper
@@ -661,22 +682,47 @@ function Modal({ isOpen, onClose, title, subtitle, children }) {
 
 // ============================================================
 // FOUNDER LOGIN
-// First visit: shows password setup. After: shows login form.
-// Password is hashed with SHA-256 before storage — never stored in plain text.
-// After 5 wrong attempts, locks for 10 minutes.
+// Password hash stored in Firestore — same on ALL devices.
+// First time: no hash in cloud → setup screen.
+// Shows loading spinner while checking Firebase.
 // ============================================================
 function FounderLogin({ onLogin, onSwitchToAmbassador }) {
-  const isFirstTime = !localStorage.getItem('stemlab_founder_hash');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [storedHash, setStoredHash] = useState(null);
   const [fails, setFails] = useState(0);
   const [lockUntil, setLockUntil] = useState(() => {
     const v = sessionStorage.getItem('stemlab_founder_lock');
     return v ? parseInt(v) : 0;
   });
   const [countdown, setCountdown] = useState(0);
+
+  // Fetch founder hash from Firebase on mount
+  useEffect(() => {
+    async function fetchHash() {
+      try {
+        const authDoc = await window.__stemlab_db.readAuthDoc();
+        const hash = authDoc?.founderHash || localStorage.getItem('stemlab_founder_hash') || null;
+        setStoredHash(hash);
+      } catch(e) {
+        setStoredHash(localStorage.getItem('stemlab_founder_hash') || null);
+      }
+      setChecking(false);
+    }
+    if (window.__stemlab_db?.isConfigured) {
+      fetchHash();
+    } else {
+      const t = setTimeout(() => {
+        setStoredHash(localStorage.getItem('stemlab_founder_hash') || null);
+        setChecking(false);
+      }, 3000);
+      window.addEventListener('firebase-ready', () => fetchHash(), { once: true });
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   useEffect(() => {
     if (!lockUntil) return;
@@ -689,13 +735,17 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
   }, [lockUntil]);
 
   const fmt_mm_ss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const isFirstTime = !storedHash;
 
   async function handleSetup(e) {
     e.preventDefault();
     if (pw.length < 8) return setErr('Password must be at least 8 characters.');
     if (pw !== pw2) return setErr('Passwords do not match.');
+    setLoading(true);
     const hash = await hashText(pw);
+    await window.__stemlab_db.writeAuthField('founderHash', hash).catch(()=>{});
     localStorage.setItem('stemlab_founder_hash', hash);
+    setStoredHash(hash);
     onLogin();
   }
 
@@ -704,8 +754,7 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
     if (lockUntil > Date.now()) return;
     setLoading(true);
     const hash = await hashText(pw);
-    const stored = localStorage.getItem('stemlab_founder_hash');
-    if (hash === stored) {
+    if (hash === storedHash) {
       const token = Array.from(window.crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');
       sessionStorage.setItem('stemlab_session', JSON.stringify({ token, expiresAt: Date.now() + 8*3600*1000 }));
       setFails(0);
@@ -725,18 +774,25 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
     setLoading(false);
   }
 
+  if (checking) {
+    return (
+      <div className="auth-bg">
+        <div className="auth-card" style={{textAlign:'center',padding:'40px 24px'}}>
+          <div style={{fontSize:36}}>🧪</div>
+          <div style={{fontFamily:'Syne',fontSize:22,fontWeight:800,color:'var(--white)',margin:'10px 0 6px'}}>STEM<span style={{color:'var(--gold)'}}>Lab</span></div>
+          <div style={{color:'var(--muted)',fontSize:13,marginTop:16}}>Connecting to cloud…</div>
+          <div style={{width:32,height:32,border:'3px solid var(--border)',borderTopColor:'var(--gold)',borderRadius:'50%',animation:'spin 0.8s linear infinite',margin:'16px auto 0'}}/>
+        </div>
+      </div>
+    );
+  }
+
   if (lockUntil > Date.now() && countdown > 0) {
     return (
       <div className="auth-bg">
         <div className="auth-card">
-          <div className="auth-logo">
-            <div className="auth-logo-emoji">🧪</div>
-            <div className="auth-logo-brand">STEM<span>Lab</span></div>
-          </div>
-          <div className="auth-lockout">
-            🔒 Too many failed attempts.<br/>
-            Try again in <b>{fmt_mm_ss(countdown)}</b>
-          </div>
+          <div className="auth-logo"><div className="auth-logo-emoji">🧪</div><div className="auth-logo-brand">STEM<span>Lab</span></div></div>
+          <div className="auth-lockout">🔒 Too many failed attempts.<br/>Try again in <b>{fmt_mm_ss(countdown)}</b></div>
           <button className="auth-link" onClick={onSwitchToAmbassador}>Ambassador Portal Login</button>
         </div>
       </div>
@@ -751,15 +807,17 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
           <div className="auth-logo-brand">STEM<span>Lab</span></div>
           <div className="auth-logo-sub">{isFirstTime ? 'First time setup' : 'Founder Dashboard'}</div>
         </div>
-
         {isFirstTime ? (
           <form onSubmit={handleSetup}>
+            <div style={{background:'rgba(244,163,0,0.1)',border:'1px solid rgba(244,163,0,0.3)',borderRadius:'var(--rs)',padding:'10px 14px',fontSize:12,color:'var(--gold)',marginBottom:14}}>
+              ⚠️ No founder account found in the cloud. You are setting this up for the first time.
+            </div>
             <label className="auth-label">Create your founder password</label>
             <input className="auth-input" type="password" placeholder="Choose a strong password (min 8 chars)" value={pw} onChange={e=>{setPw(e.target.value);setErr('');}} />
             <label className="auth-label">Confirm password</label>
             <input className="auth-input" type="password" placeholder="Repeat password" value={pw2} onChange={e=>{setPw2(e.target.value);setErr('');}} />
             {err && <div className="auth-error">{err}</div>}
-            <button className="auth-btn" type="submit">Create Password & Enter</button>
+            <button className="auth-btn" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Create Password & Enter'}</button>
           </form>
         ) : (
           <form onSubmit={handleLogin}>
