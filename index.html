@@ -640,8 +640,8 @@ const _deviceId = (() => {
 // Password is hashed with SHA-256 before storage — never stored in plain text.
 // After 5 wrong attempts, locks for 10 minutes.
 // ============================================================
-function FounderLogin({ onLogin, onSwitchToAmbassador }) {
-  const isFirstTime = !localStorage.getItem('stemlab_founder_hash');
+function FounderLogin({ onLogin, founderPasswordHash, onSetPasswordHash }) {
+  const isFirstTime = !founderPasswordHash;
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [err, setErr] = useState('');
@@ -690,7 +690,7 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
     if (pw.length < 8) return setErr('Password must be at least 8 characters.');
     if (pw !== pw2) return setErr('Passwords do not match.');
     const hash = await hashText(pw);
-    localStorage.setItem('stemlab_founder_hash', hash);
+    onSetPasswordHash(hash);
     onLogin();
   }
 
@@ -699,7 +699,7 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
     if (lockUntil > Date.now()) return;
     setLoading(true);
     const hash = await hashText(pw);
-    const stored = localStorage.getItem('stemlab_founder_hash');
+    const stored = founderPasswordHash;
     if (hash === stored) {
       const token = Array.from(window.crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');
       sessionStorage.setItem('stemlab_session', JSON.stringify({ token, expiresAt: Date.now() + 8*3600*1000 }));
@@ -2325,6 +2325,7 @@ function App() {
   const [semesterHistory, setSemesterHistory] = useLocalStorage('stemlab_history', []);
   const [visits, setVisits] = useLocalStorage('stemlab_visits', []);
   const [lastBackup, setLastBackup] = useLocalStorage('stemlab_last_backup', null);
+  const [founderPasswordHash, setFounderPasswordHash] = useLocalStorage('stemlab_founder_password_hash', null);
 
   // ── Session-only state (resets on tab close) ──
   const [founderLoggedIn, setFounderLoggedIn] = useState(() => {
@@ -2524,7 +2525,12 @@ function App() {
 
   // Founder flow
   if (!founderLoggedIn) {
-    return <FounderLogin onLogin={handleFounderLogin} onSwitchToAmbassador={()=>setMode('ambassador')} />;
+    return <FounderLogin 
+      onLogin={handleFounderLogin} 
+      founderPasswordHash={founderPasswordHash} 
+      onSetPasswordHash={setFounderPasswordHash}
+      onSwitchToAmbassador={()=>setMode('ambassador')} 
+    />;
   }
 
   // ── FOUNDER DASHBOARD ──
