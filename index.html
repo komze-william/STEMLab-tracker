@@ -8,6 +8,61 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Firebase SDK -->
+  <script type="module" id="firebase-init">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    // ─── PASTE YOUR FIREBASE CONFIG HERE ───────────────────────
+    // 1. Go to https://console.firebase.google.com
+    // 2. Create a project → Add Web App → Copy the config below
+      const firebaseConfig = {
+    apiKey: "AIzaSyAY-tnhdXOuYYAqTxLuKItBxEZxupGbgBk",
+    authDomain: "stemlab-237.firebaseapp.com",
+    projectId: "stemlab-237",
+    storageBucket: "stemlab-237.firebasestorage.app",
+    messagingSenderId: "562445470033",
+    appId: "1:562445470033:web:943509170fbe9334dc6b70",
+    measurementId: "G-63GQYZ924Z"
+  };
+    // ───────────────────────────────────────────────────────────
+
+    const CONFIGURED = !firebaseConfig.apiKey.includes('PASTE');
+
+    let app, db, auth;
+    if (CONFIGURED) {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+      signInAnonymously(auth).catch(console.error);
+    }
+
+    // ── DB HELPERS ──────────────────────────────────────────────
+    async function dbWrite(docId, data) {
+      if (!db) return;
+      try { await setDoc(doc(db, 'stemlab', docId), data); } catch(e) { console.error('dbWrite', e); }
+    }
+
+    async function dbRead(docId) {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, 'stemlab', docId));
+        return snap.exists() ? snap.data() : null;
+      } catch(e) { console.error('dbRead', e); return null; }
+    }
+
+    function dbListen(docId, callback) {
+      if (!db) return () => {};
+      return onSnapshot(doc(db, 'stemlab', docId), snap => {
+        if (snap.exists()) callback(snap.data());
+      });
+    }
+
+    // Expose to global scope for React (Babel transforms don't support ESM imports)
+    window.__stemlab_db = { dbWrite, dbRead, dbListen, isConfigured: CONFIGURED };
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
   <style>
     /* ── RESET & BASE ───────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,6 +78,7 @@
     button { font-family: 'DM Sans', sans-serif; cursor: pointer; }
     input, select, textarea { font-family: 'DM Sans', sans-serif; }
     a { color: inherit; text-decoration: none; }
+    /* ... existing a { color: inherit; text-decoration: none; } ... */
 
     /* ── SCROLLBAR ──────────────────────────────── */
     ::-webkit-scrollbar { width: 6px; }
@@ -322,6 +378,36 @@
     .qr-url { font-family:monospace; font-size:10px; color:var(--muted); word-break:break-all; margin-top:12px; text-align:center; }
     .qr-img { border-radius:8px; background:white; padding:8px; }
 
+    /* ── MOBILE TOPBAR HAMBURGER ────────────────── */
+    .hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; padding:8px; cursor:pointer; }
+    .hamburger span { display:block; width:22px; height:2px; background:var(--muted); border-radius:2px; transition:all 0.2s; }
+    .mobile-nav-overlay { display:none; position:fixed; inset:0; top:60px; background:rgba(0,0,0,0.6); z-index:190; }
+    .mobile-nav { display:none; position:fixed; top:60px; right:0; width:220px; bottom:0; background:var(--dark); z-index:195; border-left:1px solid var(--border); padding:12px; overflow-y:auto; flex-direction:column; gap:4px; }
+    .mobile-nav.open { display:flex; }
+    .mobile-nav-overlay.open { display:block; }
+    .mobile-nav .topbar-btn { text-align:left; display:block; width:100%; padding:11px 14px; font-size:13px; }
+    @media(max-width:860px) {
+      .hamburger { display:flex; }
+      .topbar-nav { display:none !important; }
+      .topbar-session { display:none; }
+    }
+    @media(max-width:600px) {
+      .page { padding:72px 14px 40px; }
+      .portal-content { padding:72px 14px 40px; }
+      .portal-tabs { gap:2px; }
+      .portal-tab { padding:6px 10px; font-size:11px; }
+      .fin-row { grid-template-columns:repeat(2,1fr); }
+      .amb-top { flex-direction:column; }
+      .modal-box { padding:18px; }
+      .modal-btns { flex-direction:column; }
+      .auth-card { padding:24px 18px; }
+      .form-card { max-width:100%; }
+      .search-row { flex-direction:column; align-items:stretch; }
+      .search-input { min-width:unset; width:100%; }
+      .topbar { padding:0 14px; }
+      .topbar-logo-text { font-size:15px; }
+    }
+
     /* ── MISC ───────────────────────────────────── */
     .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
     .divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
@@ -329,12 +415,76 @@
     .tag-active { background:rgba(46,125,50,0.2); color:#81C784; }
     .tag-inactive { background:rgba(200,40,40,0.2); color:#EF9A9A; }
     .tag-course-inactive { background:rgba(200,40,40,0.2); color:#EF9A9A; font-size:9px; padding:1px 6px; margin-left:6px; }
+  
+    .sync-banner { position:fixed; bottom:12px; right:12px; z-index:300; display:flex; align-items:center; gap:8px;
+      background:var(--surf2); border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:11px; color:var(--muted);
+      box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:opacity 0.4s; pointer-events:none; }
+    .sync-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .sync-dot.connected { background:#81C784; }
+    .sync-dot.local { background:var(--gold); }
+    .sync-dot.syncing { background:#90CAF9; animation:pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── SYNC STATUS ───────────────────────── */
+
+.sync-banner {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  background: rgba(0,0,0,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #ffffff;
+
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+.sync-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.sync-dot.connected {
+  background: #00FF00;
+  box-shadow: 0 0 10px #00FF00;
+}
+
+.sync-dot.local {
+  background: #FFD700;
+  box-shadow: 0 0 8px #FFD700;
+}
+
+.sync-dot.syncing {
+  background: #00BFFF;
+  box-shadow: 0 0 10px #00BFFF;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
   </style>
 </head>
 <body>
+
+  <div class="sync-banner">
+  <div class="sync-dot connected"></div>
+  <span>Connected</span>
+</div>
+
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
 // ============================================================
 // CONSTANTS & CONFIGURATION
@@ -421,22 +571,76 @@ function parseHash() {
 }
 
 // ============================================================
-// CUSTOM HOOK — useLocalStorage
-// Exactly like useState but automatically saves to and restores from localStorage
-// Usage: const [ambassadors, setAmbassadors] = useLocalStorage('key', defaultValue);
+// SYNC STATUS — global observable for sync banner
 // ============================================================
-function useLocalStorage(key, initial) {
+const _syncListeners = new Set();
+let _syncStatus = 'local'; // 'local' | 'connected' | 'syncing'
+function setSyncStatus(s) { _syncStatus = s; _syncListeners.forEach(fn => fn(s)); }
+function useSyncStatus() {
+  const [s, setS] = useState(_syncStatus);
+  useEffect(() => { _syncListeners.add(setS); return () => _syncListeners.delete(setS); }, []);
+  return s;
+}
+
+// ============================================================
+// CUSTOM HOOK — useFirestore (replaces useLocalStorage)
+// • If Firebase is configured: reads/writes to Firestore in real-time
+// • Falls back to localStorage if Firebase is not configured yet
+// ============================================================
+function useFirestore(key, initial) {
   const [val, setVal] = useState(() => {
     try {
       const stored = localStorage.getItem(key);
       return stored !== null ? JSON.parse(stored) : initial;
     } catch { return initial; }
   });
+  const [fbReady, setFbReady] = useState(!!window.__stemlab_db?.isConfigured);
+
+  // Wait for Firebase to initialise if it isn't yet
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-  }, [key, val]);
-  return [val, setVal];
+    const handler = () => setFbReady(!!window.__stemlab_db?.isConfigured);
+    window.addEventListener('firebase-ready', handler);
+    return () => window.removeEventListener('firebase-ready', handler);
+  }, []);
+
+  // Real-time listener from Firestore
+  useEffect(() => {
+    if (!fbReady || !window.__stemlab_db?.isConfigured) return;
+    setSyncStatus('connected');
+    const unsub = window.__stemlab_db.dbListen('appdata', (data) => {
+      if (data && data[key] !== undefined) {
+        setVal(data[key]);
+        try { localStorage.setItem(key, JSON.stringify(data[key])); } catch {}
+      }
+    });
+    return unsub;
+  }, [fbReady, key]);
+
+  // Write back to Firestore + localStorage whenever value changes
+  const setAndSync = useCallback((updater) => {
+    setVal(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      // Always persist locally as backup
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      // Persist to Firestore if configured
+      if (window.__stemlab_db?.isConfigured) {
+        setSyncStatus('syncing');
+        window.__stemlab_db.dbRead('appdata').then(existing => {
+          const merged = { ...(existing || {}), [key]: next };
+          window.__stemlab_db.dbWrite('appdata', merged)
+            .then(() => setSyncStatus('connected'))
+            .catch(() => setSyncStatus('local'));
+        }).catch(() => setSyncStatus('local'));
+      }
+      return next;
+    });
+  }, [key]);
+
+  return [val, setAndSync];
 }
+
+// Keep the old name as alias so nothing else breaks
+const useLocalStorage = useFirestore;
 
 // ============================================================
 // MODAL — Reusable overlay wrapper
@@ -572,37 +776,71 @@ function FounderLogin({ onLogin, onSwitchToAmbassador }) {
 }
 
 // ============================================================
+// SYNC BANNER — shows Firebase connection status bottom-right
+// ============================================================
+function SyncBanner() {
+  const sync = useSyncStatus();
+  const label = sync === 'connected' ? 'Cloud synced' : sync === 'syncing' ? 'Saving…' : 'Local only — add Firebase config';
+  const dot = sync === 'connected' ? 'connected' : sync === 'syncing' ? 'syncing' : 'local';
+  return (
+    <div className="sync-banner">
+      <div className={`sync-dot ${dot}`} />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+// ============================================================
 // TOPBAR — Fixed navigation bar at the top of the founder dashboard
 // Shows STEMLab logo, navigation buttons, session timer, logout
+// Mobile: collapses into hamburger menu
 // ============================================================
 function TopBar({ view, onNav, onLogout, sessionMins }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const navItems = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'add', label: 'Add Ambassador' },
-    { key: 'codes', label: 'Codes' },
-    { key: 'courses', label: 'Courses' },
-    { key: 'leaderboard', label: 'Leaderboard' },
-    { key: 'log', label: 'Log' },
-    { key: 'semester', label: 'Semester' },
-    { key: 'backup', label: 'Backup' },
+    { key: 'dashboard', label: '📊 Dashboard' },
+    { key: 'add', label: '➕ Add Ambassador' },
+    { key: 'codes', label: '🔑 Codes' },
+    { key: 'courses', label: '📚 Courses' },
+    { key: 'leaderboard', label: '🏆 Leaderboard' },
+    { key: 'log', label: '📋 Log' },
+    { key: 'semester', label: '📅 Semester' },
+    { key: 'backup', label: '💾 Backup' },
   ];
+  function nav(key) { onNav(key); setMenuOpen(false); }
   return (
-    <div className="topbar">
-      <div className="topbar-logo">
-        <span className="topbar-logo-icon">🧪</span>
-        <div>
-          <div className="topbar-logo-text">STEM<span>Lab</span></div>
-          <div className="topbar-logo-sub">Ambassador Tracker</div>
+    <>
+      <div className="topbar">
+        <div className="topbar-logo">
+          <span className="topbar-logo-icon">🧪</span>
+          <div>
+            <div className="topbar-logo-text">STEM<span>Lab</span></div>
+            <div className="topbar-logo-sub">Ambassador Tracker</div>
+          </div>
         </div>
+        {/* Desktop nav */}
+        <div className="topbar-nav">
+          {navItems.map(n => (
+            <button key={n.key} className={`topbar-btn ${view===n.key?'active':''}`} onClick={()=>nav(n.key)}>{n.label}</button>
+          ))}
+          {sessionMins > 0 && <span className="topbar-session">{Math.floor(sessionMins/60)}h{sessionMins%60}m</span>}
+          <button className="topbar-btn danger" onClick={onLogout}>Logout</button>
+        </div>
+        {/* Hamburger for mobile */}
+        <button className="hamburger" onClick={()=>setMenuOpen(o=>!o)} aria-label="Menu">
+          <span/><span/><span/>
+        </button>
       </div>
-      <div className="topbar-nav">
+      {/* Mobile nav drawer */}
+      <div className={`mobile-nav-overlay ${menuOpen?'open':''}`} onClick={()=>setMenuOpen(false)} />
+      <div className={`mobile-nav ${menuOpen?'open':''}`}>
         {navItems.map(n => (
-          <button key={n.key} className={`topbar-btn ${view===n.key?'active':''}`} onClick={()=>onNav(n.key)}>{n.label}</button>
+          <button key={n.key} className={`topbar-btn ${view===n.key?'active':''}`} onClick={()=>nav(n.key)}>{n.label}</button>
         ))}
-        {sessionMins > 0 && <span className="topbar-session">{Math.floor(sessionMins/60)}h{sessionMins%60}m</span>}
-        <button className="topbar-btn danger" onClick={onLogout}>Logout</button>
+        <hr style={{border:'none',borderTop:'1px solid var(--border)',margin:'8px 0'}}/>
+        <button className="topbar-btn danger" onClick={()=>{onLogout();setMenuOpen(false);}}>🚪 Logout</button>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1611,6 +1849,30 @@ function DataManager({ ambassadors, courses, currentSemester, semesterHistory, a
     <div>
       <h2 className="page-title">Backup & Data Management</h2>
 
+      {/* Firebase setup guide */}
+      {!window.__stemlab_db?.isConfigured && (
+        <div className="dm-section" style={{borderColor:'rgba(244,163,0,0.4)',background:'rgba(244,163,0,0.05)'}}>
+          <div className="dm-section-title" style={{color:'var(--gold)'}}>☁️ Enable Cloud Sync (Firebase Setup)</div>
+          <div className="dm-section-sub">Follow these steps once to make all devices sync automatically:</div>
+          <ol style={{color:'var(--text)',fontSize:13,paddingLeft:20,lineHeight:2}}>
+            <li>Go to <a href="https://console.firebase.google.com" target="_blank" style={{color:'var(--gold)'}}>console.firebase.google.com</a></li>
+            <li>Click <b>Create a project</b> → name it "STEMLab" → Disable Google Analytics → Create</li>
+            <li>In the left sidebar → <b>Firestore Database</b> → Create database → Start in test mode → Next</li>
+            <li>In the left sidebar → <b>Authentication</b> → Get started → Enable <b>Anonymous</b> sign-in</li>
+            <li>Click the ⚙️ gear icon → <b>Project settings</b> → scroll to <b>Your apps</b> → click <b>&lt;/&gt; Web</b></li>
+            <li>Register the app → copy the <code style={{color:'var(--gold)',background:'rgba(244,163,0,0.1)',padding:'1px 6px',borderRadius:4}}>firebaseConfig</code> object</li>
+            <li>Open this HTML file in a text editor → find the comment <b>"PASTE YOUR FIREBASE CONFIG HERE"</b> → replace the values</li>
+            <li>Save and re-open — the sync dot will turn green 🟢</li>
+          </ol>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>Firebase free tier (Spark plan) is more than enough for STEMLab. No credit card needed.</div>
+        </div>
+      )}
+      {window.__stemlab_db?.isConfigured && (
+        <div className="alert green" style={{marginBottom:16}}>
+          ☁️ Firebase connected — all data syncs automatically across all devices in real time.
+        </div>
+      )}
+
       {daysSinceBackup >= 7 && (
         <div className={`alert ${daysSinceBackup>=14?'red':'yellow'}`} style={{marginBottom:16}}>
           {daysSinceBackup >= 14 ? '🔴' : '⚠️'} {daysSinceBackup >= 999 ? 'No backup ever created' : `No backup in ${daysSinceBackup} days`} — export now to protect your data.
@@ -1748,6 +2010,7 @@ function AmbassadorLogin({ ambassadors, onLogin, onBack }) {
 function AmbassadorPortal({ currentUser, ambassadors, courses, onLogout, leaderboardVisible }) {
   const [tab, setTab] = useState('home');
   const [copied, setCopied] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const commission = calcCommission(currentUser.subscribers);
   const owed = Math.max(0, commission - currentUser.paidOut);
@@ -1779,13 +2042,14 @@ function AmbassadorPortal({ currentUser, ambassadors, courses, onLogout, leaderb
       {/* Portal top bar */}
       <div className="portal-topbar">
         <div className="portal-brand">STEM<span>Lab</span> <span style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Sans',fontWeight:400}}>Ambassador</span></div>
-        <div className="portal-tabs">
-          {[['home','Home'],['leaderboard','Leaderboard'],['qr','QR Code'],['activity','Activity']].map(([k,l])=>(
+        <div className="portal-tabs" style={{display:'flex'}}>
+          {[['home','🏠 Home'],['leaderboard','🏆 Board'],['qr','QR'],['activity','📊 Activity']].map(([k,l])=>(
             <button key={k} className={`portal-tab ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</button>
           ))}
         </div>
         <button className="portal-logout" onClick={onLogout}>Logout</button>
       </div>
+      <SyncBanner />
 
       <div className="portal-content">
 
@@ -2232,6 +2496,7 @@ function App() {
   return (
     <div>
       <TopBar view={view} onNav={setView} onLogout={handleLogout} sessionMins={sessionMins} />
+      <SyncBanner />
 
       <div className="page">
 
