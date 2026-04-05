@@ -1,0 +1,2296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 STEMLab Ambassador Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    /* ── RESET & BASE ───────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #070D1F; --dark: #0D1B4B; --surf: #0F1E3D; --surf2: #162345;
+      --blue: #1A3C8F; --gold: #F4A300; --white: #FFFFFF; --text: #E8EEFF;
+      --muted: #6B7FA8; --border: rgba(255,255,255,0.07);
+      --green: #2E7D32; --red: #C62828; --r: 12px; --rs: 8px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif;
+           -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
+    button { font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    input, select, textarea { font-family: 'DM Sans', sans-serif; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── SCROLLBAR ──────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--surf2); border-radius: 3px; }
+
+    /* ── TOPBAR ─────────────────────────────────── */
+    .topbar { position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 200;
+              background: var(--dark); border-bottom: 1px solid var(--border);
+              display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+    .topbar-logo { display: flex; align-items: center; gap: 10px; }
+    .topbar-logo-icon { font-size: 22px; }
+    .topbar-logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: var(--white); letter-spacing: 1px; }
+    .topbar-logo-text span { color: var(--gold); }
+    .topbar-logo-sub { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+    .topbar-nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .topbar-btn { background: transparent; border: none; color: var(--muted); padding: 7px 12px;
+                  border-radius: var(--rs); font-size: 12px; font-weight: 500; transition: all 0.2s; }
+    .topbar-btn:hover { background: rgba(255,255,255,0.05); color: var(--white); }
+    .topbar-btn.active { background: var(--gold); color: var(--dark); font-weight: 700; }
+    .topbar-btn.danger { color: #EF9A9A; border: 1px solid rgba(200,40,40,0.3); }
+    .topbar-session { font-size: 10px; color: var(--muted); margin-right: 6px; }
+
+    /* ── PAGE CONTENT ───────────────────────────── */
+    .page { padding: 80px 24px 40px; max-width: 1100px; margin: 0 auto; }
+    .page-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 20px; }
+
+    /* ── CARDS ──────────────────────────────────── */
+    .card { background: var(--surf); border-radius: var(--r); border: 1px solid var(--border); }
+    .card-pad { padding: 20px; }
+
+    /* ── STATS BAR ──────────────────────────────── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--surf); border-radius: var(--r); padding: 18px 16px; border: 1px solid var(--border); position: relative; overflow: hidden; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+    .stat-card.gold::before { background: var(--gold); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.blue::before { background: var(--blue); }
+    .stat-card.red::before { background: var(--red); }
+    .stat-icon { font-size: 20px; margin-bottom: 10px; }
+    .stat-val { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--white); }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: 0.3px; }
+    @media(max-width:700px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:480px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    /* ── ALERTS ─────────────────────────────────── */
+    .alert { display:flex; align-items:center; justify-content:space-between; padding:11px 16px;
+             border-radius: var(--rs); margin-bottom:8px; font-size:13px; border-left:3px solid; }
+    .alert.red { background:rgba(200,40,40,0.1); border-left-color:#C62828; color:#EF9A9A; }
+    .alert.orange { background:rgba(230,100,0,0.1); border-left-color:#E65100; color:#FFB74D; }
+    .alert.yellow { background:rgba(244,163,0,0.1); border-left-color:#F4A300; color:#FFD54F; }
+    .alert.green { background:rgba(46,125,50,0.1); border-left-color:#2E7D32; color:#81C784; }
+    .alert.blue { background:rgba(26,60,143,0.15); border-left-color:#1A3C8F; color:#90CAF9; }
+    .alert-dismiss { background:none; border:none; color:inherit; font-size:16px; opacity:0.6; padding:0 0 0 10px; }
+    .alert-dismiss:hover { opacity:1; }
+
+    /* ── AMBASSADOR CARD ────────────────────────── */
+    .amb-card { background:var(--surf); border-radius:var(--r); padding:18px 20px; border:1px solid var(--border); margin-bottom:10px; position:relative; overflow:hidden; transition:all 0.25s; }
+    .amb-card:hover { border-color:rgba(244,163,0,0.2); }
+    .amb-card.inactive { opacity:0.55; }
+    .amb-accent { position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:var(--r) 0 0 var(--r); }
+    .amb-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .amb-name { font-family:'Syne',sans-serif; font-weight:700; font-size:15px; color:var(--white); margin-bottom:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .amb-meta { font-size:12px; color:var(--muted); }
+    .amb-code { display:inline-block; font-family:monospace; font-size:12px; font-weight:700; color:var(--gold); background:rgba(244,163,0,0.1); border:1px solid rgba(244,163,0,0.2); padding:3px 10px; border-radius:6px; margin-top:6px; letter-spacing:1px; }
+    .amb-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; margin-top:8px; }
+    .amb-subs { font-family:'Syne',sans-serif; font-size:34px; font-weight:800; color:var(--white); line-height:1; }
+    .amb-subs-label { font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; text-align:right; }
+    .progress-wrap { margin:14px 0 10px; }
+    .progress-labels { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:5px; }
+    .progress-track { background:rgba(255,255,255,0.06); border-radius:10px; height:5px; }
+    .progress-fill { height:5px; border-radius:10px; transition:width 0.5s ease; }
+    .fin-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .fin-cell { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--rs); padding:8px 10px; }
+    .fin-val { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; }
+    .fin-label { font-size:10px; color:var(--muted); margin-top:2px; }
+    .analytics-row { display:flex; gap:16px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+    .analytics-item { font-size:11px; color:var(--muted); }
+    .analytics-item b { color:var(--text); font-weight:600; margin-left:4px; }
+    .amb-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .btn { border:none; border-radius:var(--rs); padding:7px 14px; font-size:12px; font-weight:700; letter-spacing:0.3px; transition:all 0.2s; }
+    .btn-gold { background:var(--gold); color:var(--dark); }
+    .btn-gold:hover { background:#FFB300; }
+    .btn-green { background:rgba(46,125,50,0.2); color:#81C784; border:1px solid rgba(46,125,50,0.3); }
+    .btn-red { background:rgba(200,40,40,0.2); color:#EF9A9A; border:1px solid rgba(200,40,40,0.3); }
+    .btn-ghost { background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid var(--border); }
+    .btn-ghost:hover { color:var(--white); }
+    .btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .hist-section { margin-top:12px; border-top:1px solid var(--border); padding-top:10px; }
+    .hist-toggle { background:none; border:none; color:var(--muted); font-size:12px; text-decoration:underline; padding:0; }
+    .hist-entry { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+    .hist-entry.disputed { color:var(--gold); }
+    .badge-inactive { background:rgba(255,255,255,0.08); color:var(--muted); font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; }
+    .badge-offboarded { background:rgba(200,40,40,0.15); color:#EF9A9A; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; }
+
+    /* ── SEARCH & LIST ──────────────────────────── */
+    .search-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+    .search-input { padding:10px 14px; background:var(--surf); border:1px solid var(--border); border-radius:var(--rs); color:var(--text); font-size:13px; outline:none; min-width:240px; }
+    .search-input:focus { border-color:rgba(244,163,0,0.5); }
+    .search-input::placeholder { color:var(--muted); }
+    .list-count { font-size:12px; color:var(--muted); }
+    .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+    .empty-icon { font-size:42px; margin-bottom:12px; }
+    .past-section { margin-top:24px; border-top:1px solid var(--border); padding-top:16px; }
+    .past-title { font-size:12px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; cursor:pointer; }
+
+    /* ── MODAL ──────────────────────────────────── */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px; }
+    .modal-box { background:var(--surf); border-radius:14px; padding:24px; width:100%; max-width:440px; border:1px solid var(--border); box-shadow:0 8px 40px rgba(0,0,0,0.5); max-height:90vh; overflow-y:auto; }
+    .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:4px; }
+    .modal-sub { font-size:13px; color:var(--muted); margin-bottom:20px; }
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:12px; color:var(--muted); font-weight:600; margin-bottom:6px; letter-spacing:0.3px; }
+    .field input, .field select, .field textarea { width:100%; padding:10px 12px; background:var(--surf2); border:1px solid var(--border); border-radius:var(--rs); color:var(--text); font-size:14px; outline:none; }
+    .field input:focus, .field select:focus { border-color:rgba(244,163,0,0.5); }
+    .field input.err, .field select.err { border-color:rgba(200,40,40,0.6); }
+    .field .err-msg { color:#EF9A9A; font-size:11px; margin-top:4px; }
+    .field select option { background:var(--surf2); }
+    .modal-warning { background:rgba(244,163,0,0.1); border:1px solid rgba(244,163,0,0.3); border-radius:var(--rs); padding:10px 14px; font-size:12px; color:var(--gold); margin-bottom:14px; }
+    .modal-info { background:rgba(26,60,143,0.2); border:1px solid rgba(26,60,143,0.3); border-radius:var(--rs); padding:14px; margin-bottom:14px; }
+    .modal-info-row { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
+    .modal-info-label { color:var(--muted); }
+    .modal-info-val { color:var(--white); font-weight:600; }
+    .modal-amount { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; color:var(--gold); margin:8px 0 4px; }
+    .modal-notice { font-size:11px; color:var(--muted); font-style:italic; margin-bottom:16px; }
+    .modal-btns { display:flex; gap:10px; margin-top:20px; }
+    .modal-btn-confirm { flex:1; padding:12px; border:none; border-radius:var(--rs); font-weight:700; font-size:14px; background:var(--gold); color:var(--dark); }
+    .modal-btn-danger { flex:1; padding:12px; border:none; border-radius:var(--rs); font-weight:700; font-size:14px; background:var(--red); color:var(--white); }
+    .modal-btn-cancel { flex:1; padding:12px; border:none; border-radius:var(--rs); font-weight:600; font-size:14px; background:rgba(255,255,255,0.05); color:var(--muted); }
+    .checklist-item { display:flex; align-items:flex-start; gap:12px; padding:12px; background:rgba(255,255,255,0.03); border-radius:var(--rs); margin-bottom:8px; border:1px solid var(--border); }
+    .checklist-item.clear { border-color:rgba(46,125,50,0.4); background:rgba(46,125,50,0.05); }
+    .checklist-item.blocked { border-color:rgba(200,40,40,0.4); background:rgba(200,40,40,0.05); }
+    .check-icon { font-size:18px; flex-shrink:0; }
+    .check-title { font-size:13px; font-weight:600; color:var(--white); margin-bottom:3px; }
+    .check-detail { font-size:12px; color:var(--muted); }
+
+    /* ── FORMS ──────────────────────────────────── */
+    .form-card { background:var(--surf); border-radius:var(--r); padding:24px; border:1px solid var(--border); max-width:560px; }
+    .form-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; color:var(--white); margin-bottom:20px; }
+    .form-submit { width:100%; padding:13px; background:var(--gold); color:var(--dark); border:none; border-radius:var(--rs); font-size:15px; font-weight:700; margin-top:8px; }
+    .success-box { background:rgba(46,125,50,0.15); border:1px solid rgba(46,125,50,0.3); border-radius:var(--r); padding:18px; margin-top:20px; }
+    .success-title { font-family:'Syne',sans-serif; font-size:16px; color:#81C784; font-weight:700; margin-bottom:10px; }
+    .success-row { font-size:13px; color:var(--muted); margin-bottom:5px; }
+    .success-row span { color:var(--white); font-weight:600; font-family:monospace; }
+    .success-warn { font-size:11px; color:var(--gold); margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); }
+
+    /* ── CODES VIEW ─────────────────────────────── */
+    .codes-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+    .code-card { background:var(--surf); border-radius:var(--r); padding:18px; border:1px solid var(--border); cursor:pointer; transition:all 0.2s; position:relative; }
+    .code-card:hover { border-color:rgba(244,163,0,0.35); transform:translateY(-2px); }
+    .code-big { font-family:monospace; font-size:18px; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:10px; }
+    .code-name { font-weight:600; font-size:14px; color:var(--white); }
+    .code-meta { font-size:11px; color:var(--muted); margin-top:3px; }
+    .code-subs { font-size:12px; color:var(--green); font-weight:600; margin-top:8px; }
+    .code-copied { position:absolute; top:8px; right:8px; background:var(--green); color:var(--white); font-size:10px; padding:3px 8px; border-radius:20px; font-weight:700; }
+    .filter-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .filter-btn { padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; font-weight:500; }
+    .filter-btn.active { background:var(--gold); color:var(--dark); border-color:var(--gold); font-weight:700; }
+
+    /* ── COURSES VIEW ───────────────────────────── */
+    .courses-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; margin-bottom:28px; }
+    .course-card { background:var(--surf); border-radius:var(--r); padding:20px; border:1px solid var(--border); transition:all 0.2s; }
+    .course-card.inactive-course { opacity:0.6; }
+    .course-code { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--gold); }
+    .course-name { font-size:13px; color:var(--muted); margin-top:2px; margin-bottom:12px; }
+    .course-slots { font-size:13px; color:var(--text); margin-bottom:6px; }
+    .course-slot-avail { display:inline-block; background:rgba(46,125,50,0.2); color:#81C784; font-size:10px; padding:2px 8px; border-radius:20px; margin-left:8px; font-weight:600; }
+    .course-amb { font-size:12px; color:var(--muted); margin-bottom:8px; }
+    .course-fee { font-size:12px; color:var(--gold); margin-bottom:12px; }
+    .course-actions { display:flex; gap:8px; }
+
+    /* ── LEADERBOARD ────────────────────────────── */
+    .lb-table { width:100%; border-collapse:collapse; }
+    .lb-row { border-bottom:1px solid var(--border); transition:background 0.2s; }
+    .lb-row:hover { background:rgba(255,255,255,0.02); }
+    .lb-row.mine { background:rgba(244,163,0,0.08); border-left:3px solid var(--gold); }
+    .lb-row.top1 { background:rgba(255,215,0,0.05); }
+    .lb-row.top2 { background:rgba(192,192,192,0.04); }
+    .lb-row.top3 { background:rgba(205,127,50,0.04); }
+    .lb-cell { padding:12px 10px; font-size:13px; }
+    .lb-rank { font-family:'Syne',sans-serif; font-weight:800; font-size:16px; width:50px; }
+    .lb-name { font-weight:600; color:var(--white); }
+    .lb-course { font-size:11px; color:var(--muted); margin-top:2px; }
+    .lb-subs { font-family:'Syne',sans-serif; font-weight:700; color:var(--gold); text-align:right; }
+    .lb-earn { color:#81C784; font-size:12px; text-align:right; }
+    .lb-hidden { text-align:center; padding:60px 20px; color:var(--muted); }
+    .lb-hidden-icon { font-size:42px; margin-bottom:12px; }
+
+    /* ── AUDIT LOG ──────────────────────────────── */
+    .audit-list { background:var(--surf); border-radius:var(--r); border:1px solid var(--border); overflow:hidden; }
+    .audit-entry { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); }
+    .audit-time { font-size:11px; color:var(--muted); min-width:72px; padding-top:2px; }
+    .audit-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; min-width:90px; text-align:center; }
+    .audit-badge.ADD { background:rgba(46,125,50,0.2); color:#81C784; }
+    .audit-badge.RECORD { background:rgba(26,60,143,0.3); color:#90CAF9; }
+    .audit-badge.PAYMENT { background:rgba(244,163,0,0.2); color:var(--gold); }
+    .audit-badge.STATUS { background:rgba(106,27,154,0.2); color:#CE93D8; }
+    .audit-badge.SEMESTER { background:rgba(0,105,92,0.2); color:#80CBC4; }
+    .audit-badge.COURSE { background:rgba(230,100,0,0.2); color:#FFB74D; }
+    .audit-desc { font-size:13px; color:var(--text); flex:1; }
+    .audit-empty { text-align:center; padding:60px; color:var(--muted); }
+
+    /* ── SEMESTER ───────────────────────────────── */
+    .sem-badge { padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+    .sem-badge.active { background:rgba(46,125,50,0.2); color:#81C784; }
+    .sem-badge.frozen { background:rgba(200,40,40,0.2); color:#EF9A9A; }
+    .sem-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .decision-card { background:var(--surf2); border-radius:var(--rs); padding:14px; margin-bottom:8px; }
+    .decision-opts { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .decision-btn { padding:5px 12px; border-radius:6px; border:2px solid transparent; font-size:12px; font-weight:600; cursor:pointer; }
+    .decision-btn.sel-continue { background:rgba(46,125,50,0.3); color:#81C784; border-color:var(--green); }
+    .decision-btn.sel-replace { background:rgba(244,163,0,0.2); color:var(--gold); border-color:var(--gold); }
+    .decision-btn.sel-remove { background:rgba(200,40,40,0.2); color:#EF9A9A; border-color:var(--red); }
+    .decision-btn.unsel { background:rgba(255,255,255,0.04); color:var(--muted); }
+    .archive-entry { padding:12px 0; border-bottom:1px solid var(--border); font-size:13px; }
+
+    /* ── DATA MANAGER ───────────────────────────── */
+    .dm-section { background:var(--surf); border-radius:var(--r); padding:20px; margin-bottom:16px; border:1px solid var(--border); }
+    .dm-section-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--white); margin-bottom:6px; }
+    .dm-section-sub { font-size:13px; color:var(--muted); margin-bottom:14px; }
+    .import-preview { background:var(--surf2); border-radius:var(--rs); padding:14px; margin-top:12px; font-size:13px; }
+
+    /* ── AUTH SCREENS ───────────────────────────── */
+    .auth-bg { min-height:100vh; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:20px; }
+    .auth-card { background:var(--surf); border-radius:16px; padding:36px; width:100%; max-width:400px; border:1px solid var(--border); box-shadow:0 8px 40px rgba(0,0,0,0.5); }
+    .auth-logo { text-align:center; margin-bottom:28px; }
+    .auth-logo-emoji { font-size:36px; }
+    .auth-logo-brand { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--white); margin-top:6px; }
+    .auth-logo-brand span { color:var(--gold); }
+    .auth-logo-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+    .auth-input-wrap { position:relative; }
+    .auth-input { width:100%; padding:11px 13px; background:var(--surf2); border:1px solid var(--border); border-radius:var(--rs); color:var(--text); font-size:14px; outline:none; margin-bottom:14px; }
+    .auth-input.pin { letter-spacing:6px; font-size:18px; text-align:center; }
+    .auth-input:focus { border-color:rgba(244,163,0,0.5); }
+    .auth-toggle { position:absolute; right:12px; top:12px; background:none; border:none; color:var(--muted); font-size:16px; }
+    .auth-btn { width:100%; padding:13px; background:var(--gold); color:var(--dark); border:none; border-radius:var(--rs); font-size:15px; font-weight:700; margin-top:4px; }
+    .auth-btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .auth-error { background:rgba(200,40,40,0.1); border:1px solid rgba(200,40,40,0.3); border-radius:var(--rs); padding:10px 14px; font-size:12px; color:#EF9A9A; margin-top:12px; text-align:center; }
+    .auth-lockout { text-align:center; color:var(--gold); font-size:14px; padding:20px 0; }
+    .auth-note { font-size:11px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.5; }
+    .auth-link { display:block; text-align:center; margin-top:14px; color:var(--muted); font-size:12px; background:none; border:none; text-decoration:underline; width:100%; }
+    .auth-label { display:block; font-size:12px; color:var(--muted); font-weight:600; margin-bottom:6px; letter-spacing:0.3px; }
+
+    /* ── AMBASSADOR PORTAL ──────────────────────── */
+    .portal-topbar { position:fixed; top:0; left:0; right:0; height:60px; z-index:200; background:var(--dark); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
+    .portal-brand { font-family:'Syne',sans-serif; font-size:17px; font-weight:800; color:var(--white); }
+    .portal-brand span { color:var(--gold); }
+    .portal-tabs { display:flex; gap:4px; }
+    .portal-tab { background:transparent; border:none; color:var(--muted); padding:7px 14px; border-radius:var(--rs); font-size:12px; font-weight:500; }
+    .portal-tab.active { background:var(--gold); color:var(--dark); font-weight:700; }
+    .portal-logout { background:none; border:1px solid rgba(200,40,40,0.3); color:#EF9A9A; padding:6px 12px; border-radius:var(--rs); font-size:12px; }
+    .portal-content { padding:80px 24px 40px; max-width:800px; margin:0 auto; }
+    .portal-welcome { font-family:'Syne',sans-serif; font-size:24px; font-weight:700; color:var(--white); margin-bottom:20px; }
+    .portal-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:20px; }
+    .portal-stat { background:var(--surf); border-radius:var(--r); padding:16px; border:1px solid var(--border); }
+    .portal-stat-val { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--white); }
+    .portal-stat-label { font-size:11px; color:var(--muted); margin-top:3px; }
+    .portal-link-url { background:var(--surf2); border:1px solid var(--border); border-radius:var(--rs); padding:12px 14px; font-family:monospace; font-size:11px; color:var(--gold); word-break:break-all; margin-bottom:10px; }
+    .portal-link-btns { display:flex; gap:8px; }
+    .portal-btn-wa { padding:8px 16px; border:none; border-radius:var(--rs); font-size:12px; font-weight:600; background:rgba(37,211,102,0.2); color:#25D366; border:1px solid rgba(37,211,102,0.3); }
+    .portal-motivate { font-size:13px; color:var(--muted); font-style:italic; margin-top:8px; }
+
+    /* ── JOIN PAGE ──────────────────────────────── */
+    .join-page { min-height:100vh; background:#F8F9FF; font-family:'DM Sans',sans-serif; color:#1a1a2e; }
+    .join-topbar { background:#0D1B4B; padding:14px 24px; text-align:center; }
+    .join-brand { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:white; }
+    .join-brand span { color:#F4A300; }
+    .join-container { max-width:560px; margin:0 auto; padding:28px 20px; }
+    .join-hero { text-align:center; margin-bottom:24px; }
+    .join-badge { display:inline-block; background:#0D1B4B; color:#F4A300; font-size:12px; font-weight:700; padding:4px 14px; border-radius:20px; margin-bottom:10px; }
+    .join-headline { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; color:#0D1B4B; line-height:1.2; margin-bottom:8px; }
+    .join-sub { font-size:15px; color:#666; }
+    .join-course-select { display:flex; gap:10px; justify-content:center; margin-bottom:24px; }
+    .join-course-btn { flex:1; max-width:190px; padding:12px; border-radius:10px; border:2px solid #E0E0E0; background:white; font-size:14px; font-weight:600; color:#333; cursor:pointer; transition:all 0.2s; }
+    .join-course-btn.selected { border-color:#0D1B4B; background:#0D1B4B; color:white; }
+    .join-white-card { background:white; border-radius:12px; padding:20px; margin-bottom:18px; box-shadow:0 2px 12px rgba(0,0,0,0.06); border:1px solid #E8E8E8; }
+    .join-section-title { font-size:12px; color:#888; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:12px; }
+    .join-vault-item { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; font-size:14px; color:#333; }
+    .join-vault-dot { width:8px; height:8px; background:#F4A300; border-radius:50%; margin-top:5px; flex-shrink:0; }
+    .join-price-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #F0F0F0; }
+    .join-price-label { font-size:14px; color:#333; }
+    .join-price-amount { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#0D1B4B; }
+    .join-best-value { background:#F4A300; color:#0D1B4B; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:8px; }
+    .join-form-field { margin-bottom:14px; }
+    .join-form-label { display:block; font-size:12px; color:#666; font-weight:600; margin-bottom:6px; }
+    .join-form-input { width:100%; padding:12px; border:1px solid #E0E0E0; border-radius:8px; font-size:14px; color:#333; outline:none; background:white; }
+    .join-form-input:focus { border-color:#0D1B4B; }
+    .join-form-select { width:100%; padding:12px; border:1px solid #E0E0E0; border-radius:8px; font-size:14px; color:#333; outline:none; background:white; }
+    .join-cta { width:100%; padding:16px; background:#F4A300; color:#0D1B4B; border:none; border-radius:10px; font-size:16px; font-weight:800; font-family:'Syne',sans-serif; cursor:pointer; }
+    .join-cta:disabled { opacity:0.6; cursor:not-allowed; }
+    .join-footer { text-align:center; font-size:11px; color:#999; margin-top:20px; line-height:1.6; }
+    .join-error { color:#C62828; font-size:12px; margin-bottom:10px; text-align:center; }
+
+    /* ── QR ─────────────────────────────────────── */
+    .qr-box { display:flex; flex-direction:column; align-items:center; background:var(--surf); border-radius:var(--r); padding:24px; border:1px solid var(--border); max-width:300px; }
+    .qr-url { font-family:monospace; font-size:10px; color:var(--muted); word-break:break-all; margin-top:12px; text-align:center; }
+    .qr-img { border-radius:8px; background:white; padding:8px; }
+
+    /* ── MISC ───────────────────────────────────── */
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+    .tag { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+    .tag-active { background:rgba(46,125,50,0.2); color:#81C784; }
+    .tag-inactive { background:rgba(200,40,40,0.2); color:#EF9A9A; }
+    .tag-course-inactive { background:rgba(200,40,40,0.2); color:#EF9A9A; font-size:9px; padding:1px 6px; margin-left:6px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ============================================================
+// CONSTANTS & CONFIGURATION
+// ============================================================
+// Change WHATSAPP_NUMBER to your real number (format: 237XXXXXXXXX, no + sign)
+const WHATSAPP_NUMBER = '237680096761';
+
+// ============================================================
+// INITIAL DATA — Launch courses
+// ============================================================
+const INITIAL_COURSES = [];
+
+// ============================================================
+// BUSINESS LOGIC FUNCTIONS
+// ============================================================
+
+// Commission calculation — 300/400/500 FCFA tiers
+// Example: 30 subscribers = (10×300)+(15×400)+(5×500) = 11,500 FCFA
+function calcCommission(subscribers) {
+  let total = 0;
+  if (subscribers >= 1) total += Math.min(subscribers, 10) * 300;
+  if (subscribers > 10) total += Math.min(subscribers - 10, 15) * 400;
+  if (subscribers > 25) total += (subscribers - 25) * 500;
+  return total;
+}
+
+// Returns title tier based on subscriber count
+function getTitle(subscribers) {
+  if (subscribers >= 30) return { label: 'Elite Ambassador', emoji: '🏆', color: '#C62828', bg: '#FFEBEE' };
+  if (subscribers >= 15) return { label: 'Top Ambassador', emoji: '⭐', color: '#F4A300', bg: '#FFF8E7' };
+  if (subscribers >= 5)  return { label: 'Rising Ambassador', emoji: '🚀', color: '#2E7D32', bg: '#E8F5E9' };
+  return { label: 'STEMLab Ambassador', emoji: '🧪', color: '#1A3C8F', bg: '#E8EAF6' };
+}
+
+// Generates unique referral code like JPN-MAT-247
+// Short names are padded: "Komze" → "KKK-CSC-381"
+function generateCode(fullName, courseId) {
+  const words = fullName.trim().split(/\s+/);
+  let initials = words.map(w => (w[0] || '').toUpperCase()).join('').slice(0, 3);
+  while (initials.length < 3) initials += (initials[initials.length - 1] || 'X');
+  const courseCode = courseId.slice(0, 3).toUpperCase();
+  const num = Math.floor(100 + Math.random() * 900);
+  return `${initials}-${courseCode}-${num}`;
+}
+
+// SHA-256 password hashing using browser Web Crypto API
+async function hashText(text) {
+  const data = new TextEncoder().encode(text);
+  const buffer = await window.crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Formats FCFA amounts with thousands separator
+const fmt = n => n.toLocaleString() + ' FCFA';
+
+// Returns today's date in DD/MM/YYYY format
+const today = () => new Date().toLocaleDateString('en-GB');
+
+// Creates an audit log entry object
+function createAuditEntry(action, desc) {
+  return {
+    id: Date.now() + Math.random(),
+    timestamp: new Date().toISOString(),
+    date: today(),
+    time: new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }),
+    action, desc
+  };
+}
+
+// Generates referral link using hash routing (works without a server)
+function generateReferralLink(code, courseId) {
+  return window.location.href.split('#')[0] + `#/join?ref=${code}&course=${courseId}`;
+}
+
+// Parses the current URL hash to determine which page to show
+function parseHash() {
+  const hash = window.location.hash.replace('#', '');
+  if (hash.startsWith('/join')) {
+    const qs = hash.includes('?') ? hash.split('?')[1] : '';
+    const params = new URLSearchParams(qs);
+    return { page: 'join', ref: params.get('ref') || '', course: params.get('course') || '' };
+  }
+  return { page: 'app' };
+}
+
+// ============================================================
+// CUSTOM HOOK — useLocalStorage
+// Exactly like useState but automatically saves to and restores from localStorage
+// Usage: const [ambassadors, setAmbassadors] = useLocalStorage('key', defaultValue);
+// ============================================================
+function useLocalStorage(key, initial) {
+  const [val, setVal] = useState(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored !== null ? JSON.parse(stored) : initial;
+    } catch { return initial; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  }, [key, val]);
+  return [val, setVal];
+}
+
+// ============================================================
+// MODAL — Reusable overlay wrapper
+// Wraps any content in a centered dark modal overlay
+// ============================================================
+function Modal({ isOpen, onClose, title, subtitle, children }) {
+  if (!isOpen) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <h2 className="modal-title">{title}</h2>
+        {subtitle && <p className="modal-sub">{subtitle}</p>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// FOUNDER LOGIN
+// First visit: shows password setup. After: shows login form.
+// Password is hashed with SHA-256 before storage — never stored in plain text.
+// After 5 wrong attempts, locks for 10 minutes.
+// ============================================================
+function FounderLogin({ onLogin, onSwitchToAmbassador }) {
+  const isFirstTime = !localStorage.getItem('stemlab_founder_hash');
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fails, setFails] = useState(0);
+  const [lockUntil, setLockUntil] = useState(() => {
+    const v = sessionStorage.getItem('stemlab_founder_lock');
+    return v ? parseInt(v) : 0;
+  });
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (!lockUntil) return;
+    const iv = setInterval(() => {
+      const rem = Math.max(0, Math.ceil((lockUntil - Date.now()) / 1000));
+      setCountdown(rem);
+      if (rem === 0) { setLockUntil(0); sessionStorage.removeItem('stemlab_founder_lock'); clearInterval(iv); }
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [lockUntil]);
+
+  const fmt_mm_ss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+  async function handleSetup(e) {
+    e.preventDefault();
+    if (pw.length < 8) return setErr('Password must be at least 8 characters.');
+    if (pw !== pw2) return setErr('Passwords do not match.');
+    const hash = await hashText(pw);
+    localStorage.setItem('stemlab_founder_hash', hash);
+    onLogin();
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    if (lockUntil > Date.now()) return;
+    setLoading(true);
+    const hash = await hashText(pw);
+    const stored = localStorage.getItem('stemlab_founder_hash');
+    if (hash === stored) {
+      const token = Array.from(window.crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');
+      sessionStorage.setItem('stemlab_session', JSON.stringify({ token, expiresAt: Date.now() + 8*3600*1000 }));
+      setFails(0);
+      onLogin();
+    } else {
+      const newFails = fails + 1;
+      setFails(newFails);
+      if (newFails >= 5) {
+        const until = Date.now() + 10*60*1000;
+        setLockUntil(until);
+        sessionStorage.setItem('stemlab_founder_lock', String(until));
+        setErr('');
+      } else {
+        setErr(`Incorrect password. ${5 - newFails} attempt${5-newFails!==1?'s':''} remaining.`);
+      }
+    }
+    setLoading(false);
+  }
+
+  if (lockUntil > Date.now() && countdown > 0) {
+    return (
+      <div className="auth-bg">
+        <div className="auth-card">
+          <div className="auth-logo">
+            <div className="auth-logo-emoji">🧪</div>
+            <div className="auth-logo-brand">STEM<span>Lab</span></div>
+          </div>
+          <div className="auth-lockout">
+            🔒 Too many failed attempts.<br/>
+            Try again in <b>{fmt_mm_ss(countdown)}</b>
+          </div>
+          <button className="auth-link" onClick={onSwitchToAmbassador}>Ambassador Portal Login</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-bg">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <div className="auth-logo-emoji">🧪</div>
+          <div className="auth-logo-brand">STEM<span>Lab</span></div>
+          <div className="auth-logo-sub">{isFirstTime ? 'First time setup' : 'Founder Dashboard'}</div>
+        </div>
+
+        {isFirstTime ? (
+          <form onSubmit={handleSetup}>
+            <label className="auth-label">Create your founder password</label>
+            <input className="auth-input" type="password" placeholder="Choose a strong password (min 8 chars)" value={pw} onChange={e=>{setPw(e.target.value);setErr('');}} />
+            <label className="auth-label">Confirm password</label>
+            <input className="auth-input" type="password" placeholder="Repeat password" value={pw2} onChange={e=>{setPw2(e.target.value);setErr('');}} />
+            {err && <div className="auth-error">{err}</div>}
+            <button className="auth-btn" type="submit">Create Password & Enter</button>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin}>
+            <label className="auth-label">Founder password</label>
+            <input className="auth-input" type="password" placeholder="Enter your password" value={pw} onChange={e=>{setPw(e.target.value);setErr('');}} autoFocus />
+            {err && <div className="auth-error">{err}</div>}
+            <button className="auth-btn" type="submit" disabled={loading}>{loading ? 'Checking...' : 'Enter Dashboard'}</button>
+          </form>
+        )}
+        <button className="auth-link" onClick={onSwitchToAmbassador}>Ambassador Portal Login</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TOPBAR — Fixed navigation bar at the top of the founder dashboard
+// Shows STEMLab logo, navigation buttons, session timer, logout
+// ============================================================
+function TopBar({ view, onNav, onLogout, sessionMins }) {
+  const navItems = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'add', label: 'Add Ambassador' },
+    { key: 'codes', label: 'Codes' },
+    { key: 'courses', label: 'Courses' },
+    { key: 'leaderboard', label: 'Leaderboard' },
+    { key: 'log', label: 'Log' },
+    { key: 'semester', label: 'Semester' },
+    { key: 'backup', label: 'Backup' },
+  ];
+  return (
+    <div className="topbar">
+      <div className="topbar-logo">
+        <span className="topbar-logo-icon">🧪</span>
+        <div>
+          <div className="topbar-logo-text">STEM<span>Lab</span></div>
+          <div className="topbar-logo-sub">Ambassador Tracker</div>
+        </div>
+      </div>
+      <div className="topbar-nav">
+        {navItems.map(n => (
+          <button key={n.key} className={`topbar-btn ${view===n.key?'active':''}`} onClick={()=>onNav(n.key)}>{n.label}</button>
+        ))}
+        {sessionMins > 0 && <span className="topbar-session">{Math.floor(sessionMins/60)}h{sessionMins%60}m</span>}
+        <button className="topbar-btn danger" onClick={onLogout}>Logout</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// STATS BAR — 6 summary cards at the top of the dashboard
+// Shows totals across all ambassadors at a glance
+// ============================================================
+function StatsBar({ ambassadors }) {
+  const active = ambassadors.filter(a => a.active);
+  const totalSubs = ambassadors.reduce((s,a)=>s+a.subscribers,0);
+  const totalComm = ambassadors.reduce((s,a)=>s+calcCommission(a.subscribers),0);
+  const totalPaid = ambassadors.reduce((s,a)=>s+a.paidOut,0);
+  const totalPending = totalComm - totalPaid;
+  const cards = [
+    { label:'Total Ambassadors', val: ambassadors.length, icon:'👥', cls:'gold' },
+    { label:'Active Ambassadors', val: active.length, icon:'✅', cls:'green' },
+    { label:'Total Subscribers', val: totalSubs, icon:'🎯', cls:'blue' },
+    { label:'Total Commissions', val: fmt(totalComm), icon:'💰', cls:'blue' },
+    { label:'Total Paid Out', val: fmt(totalPaid), icon:'✔️', cls:'green' },
+    { label:'Total Pending', val: fmt(totalPending), icon:'⏳', cls:'red' },
+  ];
+  return (
+    <div className="stats-grid">
+      {cards.map((c,i)=>(
+        <div key={i} className={`stat-card ${c.cls}`}>
+          <div className="stat-icon">{c.icon}</div>
+          <div className="stat-val">{c.val}</div>
+          <div className="stat-label">{c.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// ALERT PANEL — Proactive banners at the top of the dashboard
+// Automatically detects: payments due, slots available,
+// ambassadors with no subscribers, backup warnings
+// ============================================================
+function AlertPanel({ ambassadors, courses, visits, lastBackup }) {
+  const [dismissed, setDismissed] = useState(new Set());
+  const dismiss = id => setDismissed(prev => new Set([...prev, id]));
+
+  const alerts = [];
+
+  // Payment due alerts (pending >= 1,000 FCFA)
+  ambassadors.filter(a=>a.active).forEach(a => {
+    const owed = calcCommission(a.subscribers) - a.paidOut;
+    if (owed >= 1000) alerts.push({ id:`pay-${a.id}`, type:'red', text:`Payment due: ${a.name} is owed ${fmt(owed)}` });
+  });
+
+  // Slot available alerts
+  courses.filter(c=>c.active).forEach(c => {
+    const filled = ambassadors.filter(a=>a.course===c.id&&a.active).length;
+    if (filled < c.maxSlots) alerts.push({ id:`slot-${c.id}`, type:'orange', text:`${c.fullName} has ${c.maxSlots-filled} slot(s) available` });
+  });
+
+  // No subscribers yet
+  ambassadors.filter(a=>a.active&&a.subscribers===0).forEach(a => {
+    alerts.push({ id:`nosub-${a.id}`, type:'yellow', text:`${a.name} has no subscribers yet` });
+  });
+
+  // High clicks, no conversions
+  ambassadors.forEach(a => {
+    const clicks = visits.filter(v=>v.ref===a.code).length;
+    if (clicks >= 10 && a.subscribers === 0 && a.active) alerts.push({ id:`conv-${a.id}`, type:'blue', text:`${a.name} has ${clicks} link clicks but no subscribers — follow up` });
+  });
+
+  // Backup warning
+  if (!lastBackup || Date.now()-lastBackup > 14*86400000)
+    alerts.push({ id:'backup', type:'red', text:'No backup in 14+ days — export your data from the Backup menu' });
+  else if (Date.now()-lastBackup > 7*86400000)
+    alerts.push({ id:'backup', type:'yellow', text:'No backup in 7+ days — consider exporting your data' });
+
+  const visible = alerts.filter(a => !dismissed.has(a.id));
+  if (visible.length === 0) return (
+    <div className="alert green" style={{marginBottom:16}}>
+      <span>✅ All clear — no urgent actions needed</span>
+    </div>
+  );
+
+  return <div style={{marginBottom:8}}>
+    {visible.map(a=>(
+      <div key={a.id} className={`alert ${a.type}`}>
+        <span>{a.text}</span>
+        <button className="alert-dismiss" onClick={()=>dismiss(a.id)}>✕</button>
+      </div>
+    ))}
+  </div>;
+}
+
+// ============================================================
+// RECORD MODAL — Records new subscribers for an ambassador
+// Validates count (1-500), shows warning above 100
+// ============================================================
+function RecordModal({ ambassador, isOpen, onClose, onConfirm }) {
+  const [count, setCount] = useState(1);
+  const [note, setNote] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+
+  function reset() { setCount(1); setNote(''); setConfirmed(false); }
+  function handleClose() { reset(); onClose(); }
+
+  function handleConfirm() {
+    if (count > 100 && !confirmed) { setConfirmed(true); return; }
+    onConfirm(parseInt(count) || 1, note);
+    handleClose();
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Record Subscribers" subtitle={ambassador?.name}>
+      <div className="field">
+        <label>Number of new subscribers</label>
+        <input type="number" min="1" max="500" value={count}
+          onChange={e=>{setCount(e.target.value);setConfirmed(false);}}
+          style={{background:'var(--surf2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',padding:'10px 12px',width:'100%',fontSize:18,textAlign:'center',outline:'none'}} />
+      </div>
+      {count > 100 && !confirmed && (
+        <div className="modal-warning">⚠️ You are recording {count} subscribers at once. Click Confirm again to proceed.</div>
+      )}
+      <div className="field">
+        <label>Note (optional)</label>
+        <input type="text" value={note} onChange={e=>setNote(e.target.value)} placeholder="e.g. From physics WhatsApp group"
+          style={{background:'var(--surf2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',padding:'10px 12px',width:'100%',fontSize:14,outline:'none'}} />
+      </div>
+      <div className="modal-btns">
+        <button className="modal-btn-confirm" onClick={handleConfirm}>
+          {count > 100 && !confirmed ? 'Confirm (large count)' : 'Confirm'}
+        </button>
+        <button className="modal-btn-cancel" onClick={handleClose}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
+// PAYMENT MODAL — Confirms payment to an ambassador
+// Shows their MoMo number and exact amount to send
+// Founder confirms manually after sending via MoMo
+// ============================================================
+function PaymentModal({ ambassador, amount, isOpen, onClose, onConfirm }) {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Confirm Payment" subtitle="Confirm you have sent the payment before clicking">
+      {ambassador && (
+        <div className="modal-info">
+          <div className="modal-info-row"><span className="modal-info-label">Ambassador</span><span className="modal-info-val">{ambassador.name}</span></div>
+          <div className="modal-info-row"><span className="modal-info-label">MoMo Number</span><span className="modal-info-val">{ambassador.momoNumber}</span></div>
+          <div className="modal-amount">{fmt(amount)}</div>
+          <p className="modal-notice">Send this exact amount via MTN or Orange MoMo to the number above before clicking Confirm.</p>
+        </div>
+      )}
+      <div className="modal-btns">
+        <button className="modal-btn-confirm" onClick={onConfirm}>✓ Confirm Payment Sent</button>
+        <button className="modal-btn-cancel" onClick={onClose}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
+// OFFBOARDING MODAL — Safe removal of an ambassador
+// Checks: outstanding commission, open disputes, requires reason + name confirmation
+// ============================================================
+function OffboardingModal({ ambassador, isOpen, onClose, onConfirm }) {
+  const [reason, setReason] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [waived, setWaived] = useState(false);
+  const owed = ambassador ? Math.max(0, calcCommission(ambassador.subscribers) - ambassador.paidOut) : 0;
+  const commOk = owed === 0 || waived;
+  const nameOk = nameInput === (ambassador?.name || '');
+  const canConfirm = commOk && reason !== '' && nameOk;
+
+  function reset() { setReason(''); setNameInput(''); setWaived(false); }
+  function handleClose() { reset(); onClose(); }
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Remove Ambassador" subtitle={ambassador?.name}>
+      {/* Commission check */}
+      <div className={`checklist-item ${commOk?'clear':'blocked'}`}>
+        <span className="check-icon">{commOk?'✅':'❌'}</span>
+        <div>
+          <div className="check-title">Outstanding Commission</div>
+          <div className="check-detail">
+            {owed > 0 && !waived ? (
+              <>{fmt(owed)} still owed. <button className="btn btn-ghost" style={{fontSize:11,padding:'3px 10px',marginLeft:8}} onClick={()=>setWaived(true)}>Waive Amount</button></>
+            ) : owed === 0 ? 'No outstanding commission.' : 'Amount waived.'}
+          </div>
+        </div>
+      </div>
+
+      {/* Reason */}
+      <div className={`checklist-item ${reason?'clear':'blocked'}`}>
+        <span className="check-icon">{reason?'✅':'⚠️'}</span>
+        <div style={{flex:1}}>
+          <div className="check-title">Reason for Removal</div>
+          <select value={reason} onChange={e=>setReason(e.target.value)}
+            style={{width:'100%',marginTop:6,padding:'8px 10px',background:'var(--surf2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none'}}>
+            <option value="">Select reason...</option>
+            <option>Semester End</option>
+            <option>Voluntary Resignation</option>
+            <option>No-show / Abandoned</option>
+            <option>Contract Breach</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Name confirmation */}
+      <div className={`checklist-item ${nameOk?'clear':'blocked'}`}>
+        <span className="check-icon">{nameOk?'✅':'✏️'}</span>
+        <div style={{flex:1}}>
+          <div className="check-title">Type the ambassador's exact name to confirm</div>
+          <input type="text" value={nameInput} onChange={e=>setNameInput(e.target.value)}
+            placeholder={ambassador?.name} style={{width:'100%',marginTop:6,padding:'8px 10px',background:'var(--surf2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none'}} />
+        </div>
+      </div>
+
+      <div className="modal-btns" style={{marginTop:16}}>
+        <button className="modal-btn-danger" disabled={!canConfirm} onClick={()=>{onConfirm(ambassador, reason);reset();}}>Confirm Removal</button>
+        <button className="modal-btn-cancel" onClick={handleClose}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
+// AMBASSADOR CARD — Full display and actions for one ambassador
+// Shows: name, code, title badge, subscribers, progress bar,
+// commission breakdown, history toggle, and action buttons
+// ============================================================
+function AmbassadorCard({ ambassador, visits, onUpdate, onOffboard, isFounder }) {
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [offboardOpen, setOffboardOpen] = useState(false);
+  const [showHist, setShowHist] = useState(false);
+
+  const commission = calcCommission(ambassador.subscribers);
+  const owed = Math.max(0, commission - ambassador.paidOut);
+  const title = getTitle(ambassador.subscribers);
+  const progress = Math.min(100, (ambassador.subscribers / 30) * 100);
+  const clicks = visits.filter(v => v.ref === ambassador.code).length;
+  const conversion = clicks > 0 ? ((ambassador.subscribers / clicks) * 100).toFixed(1) + '%' : '—';
+
+  function handleRecord(count, note) {
+    const newEntry = { date: today(), added: count, note, disputed: false };
+    onUpdate({ ...ambassador, subscribers: ambassador.subscribers + count, history: [...ambassador.history, newEntry] });
+  }
+
+  function handlePay() {
+    const newPayment = { date: today(), amount: owed, method: 'MTN' };
+    onUpdate({ ...ambassador, paidOut: ambassador.paidOut + owed, payments: [...ambassador.payments, newPayment] });
+    setPayOpen(false);
+  }
+
+  function handleToggleActive() {
+    onUpdate({ ...ambassador, active: !ambassador.active });
+  }
+
+  const isOffboarded = ambassador.status === 'offboarded' || ambassador.status === 'replaced';
+
+  return (
+    <div className={`amb-card ${!ambassador.active ? 'inactive' : ''}`}>
+      {/* Colored left accent bar */}
+      <div className="amb-accent" style={{ backgroundColor: title.color }} />
+
+      {/* Header row */}
+      <div className="amb-top">
+        <div>
+          <div className="amb-name">
+            {ambassador.name}
+            {!ambassador.active && !isOffboarded && <span className="badge-inactive">INACTIVE</span>}
+            {isOffboarded && <span className="badge-offboarded">REMOVED</span>}
+          </div>
+          <div className="amb-meta">{ambassador.course} · Slot {ambassador.slot} · Joined {ambassador.joinDate}</div>
+          <div className="amb-code">{ambassador.code}</div>
+          <div className="amb-badge" style={{ background: title.bg, color: title.color }}>
+            {title.emoji} {title.label}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div className="amb-subs">{ambassador.subscribers}</div>
+          <div className="amb-subs-label">subscribers</div>
+        </div>
+      </div>
+
+      {/* Progress to Elite */}
+      <div className="progress-wrap">
+        <div className="progress-labels">
+          <span>Progress to Elite (30)</span>
+          <span>{Math.min(ambassador.subscribers, 30)}/30</span>
+        </div>
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: `${progress}%`, background: title.color }} />
+        </div>
+      </div>
+
+      {/* Financial breakdown */}
+      <div className="fin-row">
+        <div className="fin-cell">
+          <div className="fin-val" style={{ color: '#90CAF9' }}>{fmt(commission)}</div>
+          <div className="fin-label">Total Earned</div>
+        </div>
+        <div className="fin-cell">
+          <div className="fin-val" style={{ color: '#81C784' }}>{fmt(ambassador.paidOut)}</div>
+          <div className="fin-label">Paid Out</div>
+        </div>
+        <div className="fin-cell">
+          <div className="fin-val" style={{ color: owed > 0 ? '#EF9A9A' : 'var(--muted)' }}>{fmt(owed)}</div>
+          <div className="fin-label">Pending</div>
+        </div>
+      </div>
+
+      {/* Visit analytics */}
+      <div className="analytics-row">
+        <div className="analytics-item">Link Clicks: <b>{clicks}</b></div>
+        <div className="analytics-item">Conversion: <b>{conversion}</b></div>
+        <div className="analytics-item">MoMo: <b>{ambassador.momoNumber}</b></div>
+      </div>
+
+      {/* Action buttons — only shown if founder view and not offboarded */}
+      {isFounder && !isOffboarded && (
+        <div className="amb-actions">
+          <button className="btn btn-gold" onClick={() => setRecordOpen(true)}>Record Subscribers</button>
+          {owed >= 1000 && (
+            <button className="btn btn-green" onClick={() => setPayOpen(true)}>Pay {fmt(owed)}</button>
+          )}
+          <button className="btn btn-ghost" onClick={handleToggleActive}>
+            {ambassador.active ? 'Deactivate' : 'Reactivate'}
+          </button>
+          {ambassador.active && (
+            <button className="btn btn-red" onClick={() => setOffboardOpen(true)}>Remove</button>
+          )}
+        </div>
+      )}
+
+      {/* History toggle */}
+      {ambassador.history.length > 0 && (
+        <div className="hist-section">
+          <button className="hist-toggle" onClick={() => setShowHist(!showHist)}>
+            {showHist ? '▲ Hide history' : `▼ Show history (${ambassador.history.length} entries)`}
+          </button>
+          {showHist && (
+            <div style={{ marginTop: 8 }}>
+              {[...ambassador.history].reverse().slice(0, 10).map((h, i) => (
+                <div key={i} className={`hist-entry ${h.disputed ? 'disputed' : ''}`}>
+                  <span>{h.date} — +{h.added} subscribers{h.note ? ` (${h.note})` : ''}{h.disputed ? ' [DISPUTED]' : ''}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <RecordModal ambassador={ambassador} isOpen={recordOpen} onClose={() => setRecordOpen(false)} onConfirm={handleRecord} />
+      <PaymentModal ambassador={ambassador} amount={owed} isOpen={payOpen} onClose={() => setPayOpen(false)} onConfirm={handlePay} />
+      <OffboardingModal ambassador={ambassador} isOpen={offboardOpen} onClose={() => setOffboardOpen(false)}
+        onConfirm={(amb, reason) => { onOffboard(amb, reason); setOffboardOpen(false); }} />
+    </div>
+  );
+}
+
+// ============================================================
+// AMBASSADOR LIST — Shows all ambassador cards with search
+// Separates active from past (offboarded) ambassadors
+// ============================================================
+function AmbassadorList({ ambassadors, visits, onUpdate, onOffboard }) {
+  const [search, setSearch] = useState('');
+  const [showPast, setShowPast] = useState(false);
+
+  const active = ambassadors.filter(a => a.status !== 'offboarded' && a.status !== 'replaced');
+  const past = ambassadors.filter(a => a.status === 'offboarded' || a.status === 'replaced');
+
+  const filtered = active.filter(a =>
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    a.code.toLowerCase().includes(search.toLowerCase()) ||
+    a.course.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="search-row">
+        <input className="search-input" placeholder="🔍 Search by name, code, or course..." value={search} onChange={e=>setSearch(e.target.value)} />
+        <span className="list-count">Showing {filtered.length} ambassador{filtered.length!==1?'s':''}</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">🧪</div>
+          <div>{search ? 'No ambassadors match your search.' : 'No ambassadors yet. Click Add Ambassador to get started.'}</div>
+        </div>
+      ) : (
+        filtered.map(a => (
+          <AmbassadorCard key={a.id} ambassador={a} visits={visits} onUpdate={onUpdate} onOffboard={onOffboard} isFounder={true} />
+        ))
+      )}
+
+      {past.length > 0 && (
+        <div className="past-section">
+          <div className="past-title" onClick={() => setShowPast(!showPast)}>
+            {showPast ? '▲' : '▼'} Past Ambassadors ({past.length})
+          </div>
+          {showPast && past.map(a => (
+            <AmbassadorCard key={a.id} ambassador={a} visits={visits} onUpdate={onUpdate} onOffboard={onOffboard} isFounder={false} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// ADD AMBASSADOR FORM — Creates a new ambassador
+// Validates: name (3-60 chars), MoMo number (9 digits starting with 6),
+// slot availability, join date.
+// Generates referral code and 4-digit PIN automatically.
+// PIN is shown once and then hashed before storage.
+// ============================================================
+function AddAmbassadorForm({ courses, ambassadors, onAdd }) {
+  const [name, setName] = useState('');
+  const [course, setCourse] = useState(courses.filter(c=>c.active)[0]?.id || '');
+  const [slot, setSlot] = useState('1');
+  const [momo, setMomo] = useState('');
+  const [joinDate, setJoinDate] = useState(today());
+  const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState(null);
+
+  const activeCourses = courses.filter(c => c.active);
+  const hasCourses = courses.length > 0;
+
+  function validate() {
+    const errs = {};
+    if (!name.trim() || name.trim().length < 3) errs.name = 'Name must be at least 3 characters.';
+    if (name.trim().length > 60) errs.name = 'Name must be 60 characters or fewer.';
+    if (!/^6\d{8}$/.test(momo)) errs.momo = 'Enter a valid Cameroon number starting with 6 (9 digits total).';
+    if (!course) errs.course = 'Please create and select a course first.';
+    const taken = ambassadors.find(a => a.course === course && String(a.slot) === slot && a.active && a.status !== 'offboarded');
+    if (taken) errs.slot = `Slot ${slot} for this course is already taken by ${taken.name}.`;
+    if (!joinDate) errs.date = 'Join date is required.';
+    return errs;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
+    const code = generateCode(name, course);
+    const pin = String(Math.floor(1000 + Math.random() * 9000));
+    const hashedPin = await hashText(pin);
+
+    const ambassador = {
+      id: Date.now(),
+      name: name.trim(),
+      course,
+      slot: parseInt(slot),
+      code,
+      pin: hashedPin,
+      subscribers: 0,
+      paidOut: 0,
+      active: true,
+      vaultAccess: true,
+      joinDate,
+      momoNumber: momo,
+      history: [],
+      payments: [],
+      semesterRecords: [],
+      noShowFlaggedAt: null,
+      status: 'active'
+    };
+
+    onAdd(ambassador);
+    setSuccess({ name: name.trim(), code, pin });
+
+    // Reset form after 8 seconds
+    setTimeout(() => {
+      setName(''); setCourse(activeCourses[0]?.id||''); setSlot('1'); setMomo(''); setJoinDate(today()); setErrors({}); setSuccess(null);
+    }, 8000);
+  }
+
+  return (
+    <form className="form-card" onSubmit={handleSubmit}>
+      <h2 className="form-title">Add New Ambassador</h2>
+
+      <div className="field">
+        <label>Full Name *</label>
+        <input type="text" value={name} className={errors.name?'err':''} onChange={e=>{setName(e.target.value);setErrors(p=>({...p,name:''}));}} placeholder="e.g. Jean Paul Ngalle" />
+        {errors.name && <div className="err-msg">{errors.name}</div>}
+      </div>
+
+      <div className="field">
+        <label>Assigned Course *</label>
+        <select value={course} onChange={e=>{setCourse(e.target.value);setErrors(p=>({...p,course:''}));}} disabled={!hasCourses}>
+          {hasCourses ? (
+            <>
+              <option value="">Select a course</option>
+              {activeCourses.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+            </>
+          ) : (
+            <option value="">No courses available — create one first</option>
+          )}
+        </select>
+        {!hasCourses && <div className="err-msg">No courses available. Create a course before adding ambassadors.</div>}
+        {errors.course && <div className="err-msg">{errors.course}</div>}
+      </div>
+
+      <div className="field">
+        <label>Slot (max 2 per course) *</label>
+        <select value={slot} className={errors.slot?'err':''} onChange={e=>{setSlot(e.target.value);setErrors(p=>({...p,slot:''}));}}>
+          <option value="1">Slot 1</option>
+          <option value="2">Slot 2</option>
+        </select>
+        {errors.slot && <div className="err-msg">{errors.slot}</div>}
+      </div>
+
+      <div className="field">
+        <label>MTN/Orange MoMo Number *</label>
+        <input type="text" value={momo} className={errors.momo?'err':''} onChange={e=>{setMomo(e.target.value);setErrors(p=>({...p,momo:''}));}} placeholder="6XXXXXXXX (9 digits)" maxLength={9} />
+        {errors.momo && <div className="err-msg">{errors.momo}</div>}
+      </div>
+
+      <div className="field">
+        <label>Agreement Date *</label>
+        <input type="date" value={joinDate} className={errors.date?'err':''} onChange={e=>{setJoinDate(e.target.value);setErrors(p=>({...p,date:''}));}} />
+        {errors.date && <div className="err-msg">{errors.date}</div>}
+      </div>
+
+      <button className="form-submit" type="submit" disabled={!hasCourses}>Add Ambassador</button>
+
+      {!hasCourses && <div className="modal-warning" style={{marginBottom:16}}>Create at least one course before adding ambassadors.</div>}
+
+      {success && (
+        <div className="success-box">
+          <div className="success-title">✅ Ambassador added successfully!</div>
+          <div className="success-row">Name: <span>{success.name}</span></div>
+          <div className="success-row">Referral Code: <span>{success.code}</span></div>
+          <div className="success-row">PIN (login password): <span>{success.pin}</span></div>
+          <div className="success-warn">⚠️ Write this PIN down now — it cannot be recovered once this message disappears in 8 seconds.</div>
+        </div>
+      )}
+    </form>
+  );
+}
+
+// ============================================================
+// CODES VIEW — Grid of all referral codes
+// Click any card to copy the code. Filter by course or status.
+// ============================================================
+function CodesView({ ambassadors, courses }) {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [copiedId, setCopiedId] = useState(null);
+
+  const courseFilters = [...new Set(courses.map(c => c.id))];
+  const filters = ['all', ...courseFilters, 'active'];
+
+  const filtered = ambassadors.filter(a => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch = !q ||
+      a.name.toLowerCase().includes(q) ||
+      a.code.toLowerCase().includes(q) ||
+      a.course.toLowerCase().includes(q);
+
+    const matchesFilter = filter === 'all' ? true :
+      filter === 'active' ? a.active : a.course === filter;
+
+    return matchesSearch && matchesFilter;
+  });
+
+  function copyCode(a) {
+    navigator.clipboard.writeText(a.code).then(() => {
+      setCopiedId(a.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }
+
+  const filterLabel = f => {
+    if (f === 'all') return 'All';
+    if (f === 'active') return 'Active';
+    const course = courses.find(c => c.id === f);
+    return course ? course.id : f;
+  };
+
+  return (
+    <div>
+      <div className="section-header">
+        <h2 className="page-title" style={{marginBottom:0}}>Referral Codes Engine</h2>
+      </div>
+      <div className="search-row" style={{marginBottom:12}}>
+        <input
+          className="search-input"
+          placeholder="🔍 Search code, name, or course..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{flex:1, minWidth:240}}
+        />
+        <span className="list-count">Showing {filtered.length} code{filtered.length!==1?'s':''}</span>
+      </div>
+      <div className="filter-row">
+        {filters.map(f => (
+          <button key={f} className={`filter-btn ${filter===f?'active':''}`} onClick={()=>setFilter(f)}>
+            {filterLabel(f)}
+          </button>
+        ))}
+      </div>
+      <div className="codes-grid">
+        {filtered.map(a => (
+          <div key={a.id} className="code-card" onClick={() => copyCode(a)}>
+            {copiedId === a.id && <div className="code-copied">Copied! ✓</div>}
+            <div className="code-big">{a.code}</div>
+            <div className="code-name">{a.name}</div>
+            <div className="code-meta">{a.course} · Slot {a.slot}</div>
+            <div className="code-subs">📊 {a.subscribers} subscribers</div>
+            <div style={{fontSize:11,marginTop:6}}>
+              <span style={{color: a.active ? '#2E7D32' : '#6B7FA8'}}>● {a.active ? 'Active' : 'Inactive'}</span>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && <div className="empty-state" style={{gridColumn:'1/-1'}}><div className="empty-icon">🔑</div><div>No codes match this search or filter.</div></div>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// COURSES VIEW — Manage all courses
+// Shows slot fill status, assigned ambassador names.
+// Activate/deactivate courses. Add new courses.
+// ============================================================
+function CoursesView({ courses, ambassadors, onUpdateCourse, onAddCourse }) {
+  const [code, setCode] = useState('');
+  const [cname, setCname] = useState('');
+  const [semester, setSemester] = useState('');
+  const [cErr, setCErr] = useState('');
+
+  function handleAddCourse(e) {
+    e.preventDefault();
+    if (!/^[A-Z0-9]{5,8}$/i.test(code)) return setCErr('Course code must be 5-8 alphanumeric characters (e.g. MAT301).');
+    if (!cname.trim()) return setCErr('Course name is required.');
+    onAddCourse({
+      id: code.toUpperCase(),
+      name: cname.trim(),
+      fullName: code.toUpperCase() + ' — ' + cname.trim(),
+      semesterFee: 1500,
+      comboFee: 2500,
+      vaultContents: [],
+      active: true,
+      semester: semester || 'Semester 1 2025/2026',
+      maxSlots: 2
+    });
+    setCode(''); setCname(''); setSemester(''); setCErr('');
+  }
+
+  return (
+    <div>
+      <h2 className="page-title">Course Management</h2>
+      <div className="courses-grid">
+        {courses.map(c => {
+          const assigned = ambassadors.filter(a => a.course === c.id && a.active && a.status !== 'offboarded');
+          const slotsAvail = c.maxSlots - assigned.length;
+          return (
+            <div key={c.id} className={`course-card ${!c.active?'inactive-course':''}`}>
+              <div className="course-code">{c.id} {!c.active && <span className="tag-course-inactive">INACTIVE</span>}</div>
+              <div className="course-name">{c.name}</div>
+              <div className="course-slots">
+                {assigned.length}/{c.maxSlots} slots filled
+                {slotsAvail > 0 && c.active && <span className="course-slot-avail">{slotsAvail} available</span>}
+              </div>
+              <div className="course-amb">
+                {assigned.length > 0 ? assigned.map(a => a.name).join(', ') : 'No ambassadors assigned'}
+              </div>
+              <div className="course-fee">💰 {c.semesterFee.toLocaleString()} FCFA/semester</div>
+              <div className="course-actions">
+                <button className={`btn ${c.active?'btn-red':'btn-green'}`} style={{fontSize:11}} onClick={() => onUpdateCourse({ ...c, active: !c.active })}>
+                  {c.active ? 'Deactivate Course' : 'Activate Course'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="form-card" style={{marginTop:8}}>
+        <h3 style={{fontSize:16,marginBottom:16,color:'var(--white)',fontFamily:'Syne'}}>Add New Course</h3>
+        <form onSubmit={handleAddCourse}>
+          <div className="field">
+            <label>Course Code (5-8 characters, e.g. MAT301)</label>
+            <input type="text" value={code} onChange={e=>{setCode(e.target.value.toUpperCase());setCErr('');}} placeholder="MAT301" maxLength={8} />
+          </div>
+          <div className="field">
+            <label>Course Name</label>
+            <input type="text" value={cname} onChange={e=>setCname(e.target.value)} placeholder="e.g. Linear Algebra" />
+          </div>
+          <div className="field">
+            <label>Semester</label>
+            <input type="text" value={semester} onChange={e=>setSemester(e.target.value)} placeholder="e.g. Semester 2 2025/2026" />
+          </div>
+          {cErr && <div style={{color:'#EF9A9A',fontSize:12,marginBottom:10}}>{cErr}</div>}
+          <button className="form-submit" type="submit" style={{marginTop:0}}>Add Course</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// LEADERBOARD — Ranked table by subscriber count
+// Founder view: shows earnings column + toggle visibility button
+// Ambassador view: hides earnings, highlights current user's row
+// ============================================================
+function Leaderboard({ ambassadors, currentAmbId, isFounder, visible, onToggle }) {
+  const sorted = [...ambassadors].filter(a=>a.active).sort((a,b)=>b.subscribers-a.subscribers);
+  const medals = ['🥇','🥈','🥉'];
+
+  if (!isFounder && !visible) return (
+    <div className="lb-hidden">
+      <div className="lb-hidden-icon">🏆</div>
+      <div>Leaderboard coming soon — keep recruiting!</div>
+    </div>
+  );
+
+  return (
+    <div>
+      {isFounder && (
+        <div className="section-header">
+          <h2 className="page-title" style={{marginBottom:0}}>Leaderboard</h2>
+          <button className="btn btn-ghost" onClick={onToggle}>
+            {visible ? 'Hide from Ambassadors' : 'Show to Ambassadors'}
+          </button>
+        </div>
+      )}
+      {sorted.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🏆</div><div>No ambassadors yet.</div></div>
+      ) : (
+        <div className="card">
+          <table className="lb-table">
+            <thead>
+              <tr style={{borderBottom:'2px solid var(--border)'}}>
+                <th className="lb-cell" style={{color:'var(--muted)',fontSize:11,fontWeight:600,letterSpacing:1}}>RANK</th>
+                <th className="lb-cell" style={{color:'var(--muted)',fontSize:11,fontWeight:600}}>AMBASSADOR</th>
+                <th className="lb-cell lb-subs" style={{color:'var(--muted)',fontSize:11,fontWeight:600}}>SUBSCRIBERS</th>
+                {isFounder && <th className="lb-cell lb-earn" style={{color:'var(--muted)',fontSize:11,fontWeight:600}}>EARNINGS</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((a,i)=>{
+                const title = getTitle(a.subscribers);
+                const isMine = a.id === currentAmbId;
+                const rowCls = `lb-row ${isMine?'mine':''} ${i===0?'top1':i===1?'top2':i===2?'top3':''}`;
+                return (
+                  <tr key={a.id} className={rowCls}>
+                    <td className="lb-cell lb-rank">{medals[i] || i+1}</td>
+                    <td className="lb-cell">
+                      <div className="lb-name">{a.name}</div>
+                      <div className="lb-course">{a.course} · <span style={{color:title.color}}>{title.emoji} {title.label}</span></div>
+                    </td>
+                    <td className="lb-cell lb-subs">{a.subscribers}</td>
+                    {isFounder && <td className="lb-cell lb-earn">{fmt(calcCommission(a.subscribers))}</td>}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// AUDIT LOG — Append-only record of all significant actions
+// Cannot be edited. Filter by date range or action type.
+// ============================================================
+function AuditLog({ auditLog }) {
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [actionFilter, setActionFilter] = useState('all');
+
+  const filtered = auditLog.filter(e => {
+    const d = new Date(e.timestamp);
+    if (fromDate && d < new Date(fromDate)) return false;
+    if (toDate && d > new Date(toDate + 'T23:59:59')) return false;
+    if (actionFilter !== 'all' && e.action !== actionFilter) return false;
+    return true;
+  });
+
+  return (
+    <div>
+      <h2 className="page-title">Audit Log</h2>
+      <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+        <input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)} style={{padding:'8px 10px',background:'var(--surf)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none',fontSize:13}} />
+        <input type="date" value={toDate} onChange={e=>setToDate(e.target.value)} style={{padding:'8px 10px',background:'var(--surf)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none',fontSize:13}} />
+        <select value={actionFilter} onChange={e=>setActionFilter(e.target.value)} style={{padding:'8px 10px',background:'var(--surf)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none',fontSize:13}}>
+          <option value="all">All Actions</option>
+          <option value="ADD">Add</option>
+          <option value="RECORD">Record</option>
+          <option value="PAYMENT">Payment</option>
+          <option value="STATUS">Status</option>
+          <option value="SEMESTER">Semester</option>
+          <option value="COURSE">Course</option>
+        </select>
+        <span style={{fontSize:12,color:'var(--muted)',alignSelf:'center'}}>{filtered.length} entries</span>
+      </div>
+      {filtered.length === 0 ? (
+        <div className="audit-empty">No log entries match your filter.</div>
+      ) : (
+        <div className="audit-list">
+          {filtered.map(e=>(
+            <div key={e.id} className="audit-entry">
+              <div className="audit-time">{e.date}<br/>{e.time}</div>
+              <div className={`audit-badge ${e.action}`}>{e.action}</div>
+              <div className="audit-desc">{e.desc}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SEMESTER CONTROL — Manages semester transitions
+// Flow: Freeze → Clear Payments → Archive → Per-ambassador decisions → Reset
+// Data is never deleted — archived in each ambassador's semesterRecords array
+// ============================================================
+function SemesterControl({ ambassadors, currentSemester, semesterHistory, onFreeze, onReset, onUpdate }) {
+  const [decisions, setDecisions] = useState({});
+  const [newLabel, setNewLabel] = useState('');
+  const [showReset, setShowReset] = useState(false);
+  const [replaceData, setReplaceData] = useState({});
+
+  const active = ambassadors.filter(a => a.active && a.status !== 'offboarded');
+  const withPending = active.filter(a => calcCommission(a.subscribers) - a.paidOut > 0);
+  const allPaid = withPending.length === 0;
+  const frozen = currentSemester.status === 'frozen';
+
+  function setDecision(id, val) { setDecisions(p => ({...p, [id]: val})); }
+  function setReplace(id, field, val) { setReplaceData(p => ({...p, [id]: {...(p[id]||{}), [field]: val}})); }
+
+  const allDecisionsMade = active.every(a => decisions[a.id]);
+
+  function handleReset() {
+    if (!newLabel.trim()) return alert('Enter a label for the new semester.');
+    onReset(decisions, replaceData, newLabel.trim());
+    setDecisions({}); setReplaceData({}); setNewLabel(''); setShowReset(false);
+  }
+
+  return (
+    <div>
+      <h2 className="page-title">Semester Management</h2>
+
+      {/* Current semester status */}
+      <div className="card card-pad" style={{marginBottom:16}}>
+        <div className="sem-row">
+          <div>
+            <div style={{fontSize:13,color:'var(--muted)',marginBottom:4}}>Current Semester</div>
+            <div style={{fontFamily:'Syne',fontSize:18,fontWeight:700,color:'var(--white)'}}>{currentSemester.label}</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span className={`sem-badge ${currentSemester.status}`}>{currentSemester.status.toUpperCase()}</span>
+            {!frozen && <button className="btn btn-ghost" onClick={onFreeze}>🔒 Freeze Semester</button>}
+          </div>
+        </div>
+        {!frozen && <div style={{fontSize:12,color:'var(--muted)',marginTop:8}}>Freeze the semester when the period ends to lock all recordings and begin the reset process.</div>}
+      </div>
+
+      {/* When frozen — payment checklist */}
+      {frozen && (
+        <div className="card card-pad" style={{marginBottom:16}}>
+          <div style={{fontSize:14,fontWeight:600,color:'var(--white)',marginBottom:12}}>Step 1 — Clear All Outstanding Payments</div>
+          {withPending.length === 0 ? (
+            <div className="alert green" style={{marginBottom:0}}>✅ All payments cleared — ready to proceed</div>
+          ) : (
+            withPending.map(a => {
+              const owed = calcCommission(a.subscribers) - a.paidOut;
+              return (
+                <div key={a.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{fontSize:13}}>{a.name}</span>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{color:'#EF9A9A',fontWeight:600}}>{fmt(owed)}</span>
+                    <button className="btn btn-green" style={{fontSize:11}} onClick={()=>onUpdate({...a,paidOut:a.paidOut+owed,payments:[...a.payments,{date:today(),amount:owed,method:'MTN'}]})}>Mark Paid</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          {allPaid && !showReset && (
+            <button className="btn btn-gold" style={{marginTop:14,width:'100%'}} onClick={()=>setShowReset(true)}>
+              Proceed to Semester Reset →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Reset flow — per ambassador decisions */}
+      {showReset && (
+        <div className="card card-pad" style={{marginBottom:16}}>
+          <div style={{fontSize:14,fontWeight:600,color:'var(--white)',marginBottom:12}}>Step 2 — Decide for Each Ambassador</div>
+          {active.map(a => (
+            <div key={a.id} className="decision-card">
+              <div style={{fontWeight:600,color:'var(--white)',marginBottom:4}}>{a.name} <span style={{fontSize:12,color:'var(--muted)'}}>({a.course} · {a.subscribers} subs · {fmt(calcCommission(a.subscribers))} earned)</span></div>
+              <div className="decision-opts">
+                {['continue','replace','remove'].map(opt=>(
+                  <button key={opt} className={`decision-btn ${decisions[a.id]===opt?`sel-${opt}`:'unsel'}`} onClick={()=>setDecision(a.id,opt)}>
+                    {opt.charAt(0).toUpperCase()+opt.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {decisions[a.id]==='replace' && (
+                <div style={{marginTop:10,display:'flex',gap:8}}>
+                  <input placeholder="New ambassador name" style={{flex:1,padding:'8px 10px',background:'var(--surf)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none',fontSize:13}}
+                    onChange={e=>setReplace(a.id,'name',e.target.value)} />
+                  <input placeholder="New MoMo (9 digits)" style={{flex:1,padding:'8px 10px',background:'var(--surf)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none',fontSize:13}}
+                    onChange={e=>setReplace(a.id,'momo',e.target.value)} />
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div className="field" style={{marginTop:16}}>
+            <label>New Semester Label</label>
+            <input type="text" value={newLabel} onChange={e=>setNewLabel(e.target.value)} placeholder="e.g. Semester 2 2025/2026"
+              style={{background:'var(--surf2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',color:'var(--text)',padding:'10px 12px',width:'100%',fontSize:14,outline:'none'}} />
+          </div>
+
+          <button className="btn btn-gold" disabled={!allDecisionsMade||!newLabel.trim()} style={{width:'100%',padding:'13px',fontSize:14,marginTop:8}} onClick={handleReset}>
+            ✓ Confirm Semester Reset
+          </button>
+        </div>
+      )}
+
+      {/* Semester archive */}
+      {semesterHistory.length > 0 && (
+        <div className="card card-pad">
+          <div style={{fontFamily:'Syne',fontSize:16,fontWeight:700,color:'var(--white)',marginBottom:12}}>Semester Archive</div>
+          {semesterHistory.map((s,i)=>(
+            <div key={i} className="archive-entry">
+              <div style={{fontWeight:600,color:'var(--white)'}}>{s.label}</div>
+              <div style={{fontSize:12,color:'var(--muted)',marginTop:3}}>{s.ambassadorCount} ambassadors · Archived {s.archivedDate}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// DATA MANAGER — Export and restore all platform data
+// Full JSON backup, payment summary export, and import/restore
+// ============================================================
+function DataManager({ ambassadors, courses, currentSemester, semesterHistory, auditLog, onImport, lastBackup, onBackupNow }) {
+  const [importPreview, setImportPreview] = useState(null);
+  const [importData, setImportData] = useState(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [importErr, setImportErr] = useState('');
+
+  function exportJSON() {
+    const data = { exportDate: new Date().toISOString(), version: '2.0', ambassadors, courses, currentSemester, semesterHistory, auditLog };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `stemlab-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    onBackupNow();
+  }
+
+  function exportPayments() {
+    const lines = ['STEMLab Payment Summary — ' + today(), ''];
+    ambassadors.forEach(a => {
+      const owed = calcCommission(a.subscribers) - a.paidOut;
+      if (owed > 0) lines.push(`${a.name} | MoMo: ${a.momoNumber} | Course: ${a.course} | Owed: ${fmt(owed)}`);
+    });
+    if (lines.length === 2) lines.push('No outstanding payments.');
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `stemlab-payments-${today().replace(/\//g,'-')}.txt`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  function handleFile(e) {
+    const f = e.target.files[0]; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.ambassadors || !data.courses) return setImportErr('Invalid backup file — missing required data.');
+        setImportData(data);
+        setImportPreview({ ambassadors: data.ambassadors.length, semesters: data.semesterHistory?.length || 0, date: data.exportDate });
+        setImportErr('');
+      } catch { setImportErr('Could not read file. Make sure it is a valid STEMLab backup.'); }
+    };
+    reader.readAsText(f);
+  }
+
+  function confirmImport() {
+    if (confirmText !== 'RESTORE') return;
+    onImport(importData);
+    alert('Data restored successfully. The page will reload.');
+    window.location.reload();
+  }
+
+  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - lastBackup) / 86400000) : 999;
+
+  return (
+    <div>
+      <h2 className="page-title">Backup & Data Management</h2>
+
+      {daysSinceBackup >= 7 && (
+        <div className={`alert ${daysSinceBackup>=14?'red':'yellow'}`} style={{marginBottom:16}}>
+          {daysSinceBackup >= 14 ? '🔴' : '⚠️'} {daysSinceBackup >= 999 ? 'No backup ever created' : `No backup in ${daysSinceBackup} days`} — export now to protect your data.
+        </div>
+      )}
+
+      <div className="dm-section">
+        <div className="dm-section-title">📥 Export Data</div>
+        <div className="dm-section-sub">Save a copy of all your data to your device.</div>
+        <button className="btn btn-gold" onClick={exportJSON} style={{marginRight:10,marginBottom:8}}>Export Full Backup (JSON)</button>
+        <button className="btn btn-ghost" onClick={exportPayments} style={{marginBottom:8}}>Export Payment Summary (TXT)</button>
+        {lastBackup && <div style={{fontSize:11,color:'var(--muted)',marginTop:6}}>Last backup: {new Date(lastBackup).toLocaleDateString('en-GB')}</div>}
+      </div>
+
+      <div className="dm-section">
+        <div className="dm-section-title">📤 Import & Restore</div>
+        <div className="dm-section-sub">Restore data from a previously exported backup file.</div>
+        <input type="file" accept=".json" onChange={handleFile} style={{color:'var(--muted)',fontSize:13}} />
+        {importErr && <div style={{color:'#EF9A9A',fontSize:12,marginTop:8}}>{importErr}</div>}
+        {importPreview && (
+          <div className="import-preview">
+            <div style={{color:'var(--white)',fontWeight:600,marginBottom:6}}>Backup contains:</div>
+            <div style={{color:'var(--muted)',marginBottom:4}}>• {importPreview.ambassadors} ambassadors</div>
+            <div style={{color:'var(--muted)',marginBottom:4}}>• {importPreview.semesters} archived semesters</div>
+            <div style={{color:'var(--muted)',marginBottom:12}}>• Exported: {importPreview.date ? new Date(importPreview.date).toLocaleDateString() : 'unknown'}</div>
+            <div style={{color:'#EF9A9A',fontSize:12,marginBottom:8}}>⚠️ This will REPLACE all current data. Type RESTORE below to confirm.</div>
+            <input type="text" value={confirmText} onChange={e=>setConfirmText(e.target.value)} placeholder="Type RESTORE to confirm"
+              style={{width:'100%',padding:'9px 12px',background:'var(--surf)',border:'2px solid rgba(200,40,40,0.4)',borderRadius:'var(--rs)',color:'var(--text)',outline:'none',fontSize:13,marginBottom:8}} />
+            <button className="btn btn-red" disabled={confirmText!=='RESTORE'} onClick={confirmImport} style={{width:'100%',padding:10,fontSize:13}}>
+              Confirm Restore
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// AMBASSADOR LOGIN — Code + PIN authentication
+// Rate limiting: 3 wrong PIN attempts for a code = 5-minute lockout
+// Hashed PIN comparison using SHA-256
+// ============================================================
+function AmbassadorLogin({ ambassadors, onLogin, onBack }) {
+  const [code, setCode] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [err, setErr] = useState('');
+  const [fails, setFails] = useState({});
+  const [lockouts, setLockouts] = useState({});
+  const [countdown, setCountdown] = useState(0);
+
+  const lockKey = code.trim().toUpperCase();
+  const lockUntil = lockouts[lockKey] || 0;
+  const locked = lockUntil > Date.now();
+
+  useEffect(() => {
+    if (!locked) return;
+    const iv = setInterval(() => {
+      const rem = Math.max(0, Math.ceil((lockUntil - Date.now()) / 1000));
+      setCountdown(rem);
+      if (rem === 0) { setLockouts(p => ({...p, [lockKey]: 0})); clearInterval(iv); }
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [locked, lockUntil, lockKey]);
+
+  const fmt_mm_ss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    if (locked) return;
+    const codeUp = code.trim().toUpperCase();
+    const amb = ambassadors.find(a => a.code.toUpperCase() === codeUp && a.active && a.status !== 'offboarded' && a.status !== 'replaced');
+    if (!amb) return setErr('Incorrect code or PIN — contact STEMLab.');
+
+    const hashedPin = await hashText(pin);
+    if (hashedPin !== amb.pin) {
+      const newFails = (fails[codeUp] || 0) + 1;
+      setFails(p => ({...p, [codeUp]: newFails}));
+      if (newFails >= 3) {
+        setLockouts(p => ({...p, [codeUp]: Date.now() + 5*60*1000}));
+        setErr('');
+      } else {
+        setErr(`Incorrect PIN. ${3-newFails} attempt${3-newFails!==1?'s':''} remaining.`);
+      }
+      return;
+    }
+
+    sessionStorage.setItem('stemlab_amb_session', JSON.stringify({ ambassadorId: amb.id, expiresAt: Date.now() + 24*3600*1000 }));
+    setFails(p => ({...p, [codeUp]: 0}));
+    onLogin(amb);
+  }
+
+  return (
+    <div className="auth-bg">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <div className="auth-logo-emoji">🧪</div>
+          <div className="auth-logo-brand">STEM<span>Lab</span></div>
+          <div className="auth-logo-sub">Ambassador Portal</div>
+        </div>
+
+        {locked ? (
+          <div className="auth-lockout">
+            🔒 Too many attempts for this code.<br/>
+            Try again in <b>{fmt_mm_ss(countdown)}</b>
+          </div>
+        ) : (
+          <form onSubmit={handleLogin}>
+            <label className="auth-label">Your Referral Code</label>
+            <input className="auth-input" type="text" placeholder="e.g. JPN-MAT-247" value={code}
+              onChange={e=>{setCode(e.target.value.toUpperCase());setErr('');}} autoFocus />
+            <label className="auth-label">Your 4-Digit PIN</label>
+            <div className="auth-input-wrap" style={{position:'relative'}}>
+              <input className="auth-input pin" type={showPin?'text':'password'} placeholder="● ● ● ●" maxLength={4}
+                value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,''));setErr('');}} />
+              <button type="button" className="auth-toggle" onClick={()=>setShowPin(!showPin)}>{showPin?'🙈':'👁️'}</button>
+            </div>
+            {err && <div className="auth-error">{err}</div>}
+            <button className="auth-btn" type="submit">Enter Portal</button>
+          </form>
+        )}
+
+        <p className="auth-note">Your code and PIN were given to you when you signed your ambassador agreement.</p>
+        <button className="auth-link" onClick={onBack}>← Back to Founder Login</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// AMBASSADOR PORTAL — Personal dashboard for each ambassador
+// Tabs: Home (stats + referral link), Leaderboard, QR Code, Activity
+// ============================================================
+function AmbassadorPortal({ currentUser, ambassadors, courses, onLogout, leaderboardVisible }) {
+  const [tab, setTab] = useState('home');
+  const [copied, setCopied] = useState(false);
+
+  const commission = calcCommission(currentUser.subscribers);
+  const owed = Math.max(0, commission - currentUser.paidOut);
+  const title = getTitle(currentUser.subscribers);
+  const progress = Math.min(100, (currentUser.subscribers / 30) * 100);
+  const referralLink = generateReferralLink(currentUser.code, currentUser.course);
+  const courseObj = courses.find(c => c.id === currentUser.course);
+  const firstName = currentUser.name.split(' ')[0];
+
+  // Next tier message
+  const nextTiers = [{t:5,label:'Rising Ambassador 🚀'},{t:15,label:'Top Ambassador ⭐'},{t:30,label:'Elite Ambassador 🏆'}];
+  const nextTier = nextTiers.find(t => currentUser.subscribers < t.t);
+  const motivate = nextTier ? `You need ${nextTier.t - currentUser.subscribers} more subscriber${nextTier.t-currentUser.subscribers!==1?'s':''} to reach ${nextTier.label}` : '🏆 You have reached the top tier!';
+
+  function copyLink() {
+    navigator.clipboard.writeText(referralLink).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
+  }
+
+  function shareWA() {
+    const msg = `Struggling with ${courseObj?.fullName || currentUser.course}? STEMLab has full past paper solutions and video walkthroughs for just 1,500 FCFA per semester. Join with my link: ${referralLink}`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  // QR code uses a free API that generates QR images
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralLink)}`;
+
+  return (
+    <div style={{background:'var(--bg)',minHeight:'100vh'}}>
+      {/* Portal top bar */}
+      <div className="portal-topbar">
+        <div className="portal-brand">STEM<span>Lab</span> <span style={{fontSize:12,color:'var(--muted)',fontFamily:'DM Sans',fontWeight:400}}>Ambassador</span></div>
+        <div className="portal-tabs">
+          {[['home','Home'],['leaderboard','Leaderboard'],['qr','QR Code'],['activity','Activity']].map(([k,l])=>(
+            <button key={k} className={`portal-tab ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</button>
+          ))}
+        </div>
+        <button className="portal-logout" onClick={onLogout}>Logout</button>
+      </div>
+
+      <div className="portal-content">
+
+        {/* HOME TAB */}
+        {tab === 'home' && (
+          <div>
+            <div className="portal-welcome">Welcome back, {firstName} 👋</div>
+
+            {/* Stat cards */}
+            <div className="portal-stats">
+              {[
+                { label:'My Subscribers', val: currentUser.subscribers },
+                { label:'My Earnings', val: fmt(commission) },
+                { label:'Paid Out', val: fmt(currentUser.paidOut) },
+                { label:'Pending', val: fmt(owed) },
+              ].map((s,i)=>(
+                <div key={i} className="portal-stat">
+                  <div className="portal-stat-val">{s.val}</div>
+                  <div className="portal-stat-label">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Title & progress */}
+            <div className="card card-pad" style={{marginBottom:16}}>
+              <div className="amb-badge" style={{background:title.bg,color:title.color,fontSize:14,fontWeight:700,padding:'8px 16px',marginBottom:12}}>
+                {title.emoji} {title.label}
+              </div>
+              <div className="progress-wrap">
+                <div className="progress-labels"><span>Progress to Elite (30)</span><span>{Math.min(currentUser.subscribers,30)}/30</span></div>
+                <div className="progress-track">
+                  <div className="progress-fill" style={{width:`${progress}%`,background:title.color}}/>
+                </div>
+              </div>
+              <div className="portal-motivate">{motivate}</div>
+            </div>
+
+            {/* Referral link */}
+            <div className="card card-pad" style={{marginBottom:16}}>
+              <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,letterSpacing:0.5,marginBottom:8}}>MY REFERRAL LINK</div>
+              <div className="portal-link-url">{referralLink}</div>
+              <div className="portal-link-btns">
+                <button className="btn btn-gold" onClick={copyLink}>{copied?'Copied! ✓':'Copy Link'}</button>
+                <button className="portal-btn-wa" onClick={shareWA}>Share on WhatsApp</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LEADERBOARD TAB */}
+        {tab === 'leaderboard' && (
+          <Leaderboard ambassadors={ambassadors} currentAmbId={currentUser.id} isFounder={false} visible={leaderboardVisible} />
+        )}
+
+        {/* QR CODE TAB */}
+        {tab === 'qr' && (
+          <div>
+            <div style={{fontFamily:'Syne',fontSize:18,fontWeight:700,color:'var(--white)',marginBottom:8}}>My QR Code</div>
+            <div style={{fontSize:13,color:'var(--muted)',marginBottom:20}}>Ambassadors can print this and share it on campus. Scanning opens the join page with your referral code pre-filled.</div>
+            <div className="qr-box">
+              <img className="qr-img" src={qrUrl} alt="Your referral QR code" width={200} height={200} />
+              <div className="qr-url">{referralLink}</div>
+              <div style={{marginTop:14,display:'flex',gap:10}}>
+                <a href={qrUrl} download={`stemlab-qr-${currentUser.code}.png`}>
+                  <button className="btn btn-gold" style={{fontSize:12}}>Download QR</button>
+                </a>
+                <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>window.print()}>Print</button>
+              </div>
+            </div>
+            <p style={{fontSize:11,color:'var(--muted)',marginTop:16}}>Tip: Right-click the QR code and choose "Save image as" to download it.</p>
+          </div>
+        )}
+
+        {/* ACTIVITY TAB */}
+        {tab === 'activity' && (
+          <div>
+            <div style={{fontFamily:'Syne',fontSize:18,fontWeight:700,color:'var(--white)',marginBottom:16}}>My Activity</div>
+            {currentUser.history.length === 0 ? (
+              <div className="empty-state"><div className="empty-icon">📊</div><div>No activity yet — start sharing your referral link!</div></div>
+            ) : (
+              <div className="card" style={{overflow:'hidden'}}>
+                {[...currentUser.history].reverse().map((h,i)=>(
+                  <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid var(--border)',fontSize:13}}>
+                    <span style={{color:'var(--muted)'}}>{h.date}{h.note?' · '+h.note:''}</span>
+                    <span style={{color:'var(--gold)',fontWeight:600}}>+{h.added} subscribers</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {currentUser.payments.length > 0 && (
+              <div style={{marginTop:20}}>
+                <div style={{fontFamily:'Syne',fontSize:16,fontWeight:700,color:'var(--white)',marginBottom:12}}>Payment History</div>
+                <div className="card" style={{overflow:'hidden'}}>
+                  {[...currentUser.payments].reverse().map((p,i)=>(
+                    <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid var(--border)',fontSize:13}}>
+                      <span style={{color:'var(--muted)'}}>{p.date} · {p.method}</span>
+                      <span style={{color:'#81C784',fontWeight:600}}>{fmt(p.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// JOIN PAGE — Public student-facing page
+// Accessible via hash route: #/join?ref=CODE&course=COURSE
+// Light theme — completely different from the dashboard
+// Student fills name + phone → JOIN NOW → WhatsApp opens with all details
+// ============================================================
+function JoinPage({ hashData, courses, visits, setVisits }) {
+  const [selectedCourse, setSelectedCourse] = useState(hashData.course || '');
+  const [studentName, setStudentName] = useState('');
+  const [studentPhone, setStudentPhone] = useState('');
+  const [err, setErr] = useState('');
+
+  const courseObj = courses.find(c => c.id === selectedCourse);
+  const activeCourses = courses.filter(c => c.active);
+  const hasCourses = courses.length > 0;
+
+  // Record the visit when the page loads
+  useEffect(() => {
+    if (hashData.ref) {
+      const newVisit = { ref: hashData.ref, course: hashData.course || 'none', timestamp: Date.now(), date: today() };
+      setVisits(prev => {
+        const updated = [...prev, newVisit];
+        try { localStorage.setItem('stemlab_visits', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+      sessionStorage.setItem('stemlab_ref', hashData.ref);
+    }
+  }, []);
+
+  function handleJoin() {
+    if (!studentName.trim()) return setErr('Please enter your name.');
+    if (!studentPhone.trim()) return setErr('Please enter your WhatsApp number.');
+    if (!selectedCourse) return setErr('Please select your course.');
+    const ref = sessionStorage.getItem('stemlab_ref') || hashData.ref || 'none';
+    const courseName = courseObj?.fullName || selectedCourse || 'STEMLab Vault';
+    const msg = `Hello STEMLab! I want to join.\n\nName: ${studentName.trim()}\nPhone: ${studentPhone.trim()}\nCourse: ${courseName}\nReferral Code: ${ref}\n\nPlease send me payment details.\nAmount: 1,500 FCFA`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  return (
+    <div className="join-page">
+      <div className="join-topbar">
+        <div className="join-brand">🧪 STEM<span>Lab</span></div>
+      </div>
+
+      <div className="join-container">
+
+        {/* Course selector if no course in URL */}
+        {!selectedCourse && (
+          <div className="join-hero">
+            <div className="join-headline">Access Your STEMLab Vault</div>
+            <div className="join-sub">Choose your course to see what is inside</div>
+            <div className="join-course-select" style={{marginTop:20}}>
+              {activeCourses.map(c => (
+                <button key={c.id} className="join-course-btn" onClick={()=>setSelectedCourse(c.id)}>{c.id}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedCourse && (
+          <>
+            {/* Hero */}
+            <div className="join-hero">
+              <div className="join-badge">{courseObj?.fullName || selectedCourse}</div>
+              <div className="join-headline">Stop Guessing.<br/>Start Passing.</div>
+              <div className="join-sub">Past papers, worked solutions, video walkthroughs — everything that shows up on your exam.</div>
+            </div>
+
+            {/* Vault contents */}
+            {courseObj?.vaultContents?.length > 0 && (
+              <div className="join-white-card">
+                <div className="join-section-title">What is inside the vault</div>
+                {courseObj.vaultContents.map((item,i)=>(
+                  <div key={i} className="join-vault-item">
+                    <div className="join-vault-dot"/>
+                    <div>{item}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pricing */}
+            <div className="join-white-card">
+              <div className="join-section-title">Pricing</div>
+              <div className="join-price-row">
+                <span className="join-price-label">One course</span>
+                <span className="join-price-amount">1,500 FCFA</span>
+              </div>
+            </div>
+
+            {/* Registration form */}
+            <div className="join-white-card">
+              <div className="join-section-title">Almost there — fill your details</div>
+              <p style={{fontSize:13,color:'#666',marginBottom:14}}>Your details are sent directly to our team via WhatsApp. Payment confirmed manually.</p>
+              <div className="join-form-field">
+                <label className="join-form-label">Your Full Name *</label>
+                <input className="join-form-input" type="text" placeholder="e.g. Marie Claire Ateba" value={studentName} onChange={e=>{setStudentName(e.target.value);setErr('');}} />
+              </div>
+              <div className="join-form-field">
+                <label className="join-form-label">Your WhatsApp Number *</label>
+                <input className="join-form-input" type="text" placeholder="e.g. 6XXXXXXXX" value={studentPhone} onChange={e=>{setStudentPhone(e.target.value);setErr('');}} />
+              </div>
+              <div className="join-form-field">
+                <label className="join-form-label">Course you want *</label>
+                <select className="join-form-select" value={selectedCourse} onChange={e=>setSelectedCourse(e.target.value)}>
+                  {activeCourses.map(c=><option key={c.id} value={c.id}>{c.fullName} — {c.semesterFee.toLocaleString()} FCFA</option>)}
+                </select>
+              </div>
+              {err && <div className="join-error">{err}</div>}
+              <button className="join-cta" onClick={handleJoin}>JOIN NOW — Send Request via WhatsApp</button>
+            </div>
+
+            <div className="join-footer">
+              STEMLab — Independent academic platform.<br/>
+              Payment confirmed manually via MTN/Orange MoMo. Not affiliated with any institution.
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// APP — Root component
+// Manages all state, routing, session checks, and data handlers
+// This is the central hub that connects everything together
+// ============================================================
+function App() {
+  // ── Persistent state (survives page refresh) ──
+  const [ambassadors, setAmbassadors] = useLocalStorage('stemlab_v2_ambassadors', []);
+  const [courses, setCourses] = useLocalStorage('stemlab_v2_courses', INITIAL_COURSES);
+  const [auditLog, setAuditLog] = useLocalStorage('stemlab_audit', []);
+  const [leaderboardVisible, setLeaderboardVisible] = useLocalStorage('stemlab_leaderboard', true);
+  const [currentSemester, setCurrentSemester] = useLocalStorage('stemlab_semester', {
+    id: 'SEM-2025-S1', label: 'Semester 1 — 2025/2026',
+    startDate: today(), status: 'active'
+  });
+  const [semesterHistory, setSemesterHistory] = useLocalStorage('stemlab_history', []);
+  const [visits, setVisits] = useLocalStorage('stemlab_visits', []);
+  const [lastBackup, setLastBackup] = useLocalStorage('stemlab_last_backup', null);
+
+  // ── Session-only state (resets on tab close) ──
+  const [founderLoggedIn, setFounderLoggedIn] = useState(() => {
+    try { const s = JSON.parse(sessionStorage.getItem('stemlab_session')||'{}'); return !!(s.token && s.expiresAt > Date.now()); } catch { return false; }
+  });
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const s = JSON.parse(sessionStorage.getItem('stemlab_amb_session')||'{}');
+      if (!s.ambassadorId || s.expiresAt <= Date.now()) return null;
+      return null; // Will be resolved after ambassadors load
+    } catch { return null; }
+  });
+  const [mode, setMode] = useState('founder'); // 'founder' | 'ambassador'
+  const [view, setView] = useState('dashboard');
+  const [hashData, setHashData] = useState(parseHash());
+  const [sessionMins, setSessionMins] = useState(0);
+
+  // Resolve ambassador session after ambassadors load
+  useEffect(() => {
+    if (ambassadors.length === 0 || currentUser) return;
+    try {
+      const s = JSON.parse(sessionStorage.getItem('stemlab_amb_session')||'{}');
+      if (s.ambassadorId && s.expiresAt > Date.now()) {
+        const amb = ambassadors.find(a => a.id === s.ambassadorId);
+        if (amb) { setCurrentUser(amb); setMode('ambassador'); }
+      }
+    } catch {}
+  }, [ambassadors]);
+
+  // Hash routing — listens for URL changes
+  useEffect(() => {
+    const handler = () => setHashData(parseHash());
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  // Session timer for founder
+  useEffect(() => {
+    if (!founderLoggedIn) return;
+    const tick = () => {
+      try {
+        const s = JSON.parse(sessionStorage.getItem('stemlab_session')||'{}');
+        if (!s.expiresAt || s.expiresAt <= Date.now()) { handleLogout(); return; }
+        setSessionMins(Math.max(0, Math.floor((s.expiresAt - Date.now()) / 60000)));
+      } catch {}
+    };
+    tick();
+    const iv = setInterval(tick, 60000);
+    return () => clearInterval(iv);
+  }, [founderLoggedIn]);
+
+  // Audit helper — adds entry to the audit log
+  function audit(action, desc) {
+    setAuditLog(prev => [createAuditEntry(action, desc), ...prev].slice(0, 500));
+  }
+
+  // ── DATA HANDLERS ──
+
+  function handleAddAmbassador(ambassador) {
+    setAmbassadors(prev => [...prev, ambassador]);
+    audit('ADD', `Ambassador ${ambassador.name} added to ${ambassador.course} slot ${ambassador.slot} with code ${ambassador.code}`);
+  }
+
+  function handleUpdateAmbassador(updated) {
+    const prev = ambassadors.find(a => a.id === updated.id);
+    if (prev) {
+      if (updated.subscribers > prev.subscribers) {
+        const added = updated.subscribers - prev.subscribers;
+        audit('RECORD', `Recorded +${added} subscriber${added!==1?'s':''} for ${updated.name}. Total: ${updated.subscribers}`);
+      }
+      if (updated.paidOut > prev.paidOut) {
+        const paid = updated.paidOut - prev.paidOut;
+        audit('PAYMENT', `Paid ${fmt(paid)} to ${updated.name}. Cumulative paid: ${fmt(updated.paidOut)}`);
+      }
+      if (updated.active !== prev.active) {
+        audit('STATUS', `${updated.name} ${updated.active ? 'reactivated' : 'deactivated'}`);
+      }
+    }
+    setAmbassadors(prev => prev.map(a => a.id === updated.id ? updated : a));
+  }
+
+  function handleOffboardAmbassador(ambassador, reason) {
+    const updated = { ...ambassador, active: false, vaultAccess: false, status: 'offboarded', offboardedAt: today(), offboardReason: reason };
+    setAmbassadors(prev => prev.map(a => a.id === ambassador.id ? updated : a));
+    audit('STATUS', `${ambassador.name} removed. Reason: ${reason}`);
+  }
+
+  function handleUpdateCourse(updated) {
+    setCourses(prev => prev.map(c => c.id === updated.id ? updated : c));
+    audit('COURSE', `Course ${updated.id} ${updated.active ? 'activated' : 'deactivated'}`);
+  }
+
+  function handleAddCourse(newCourse) {
+    setCourses(prev => [...prev, newCourse]);
+    audit('COURSE', `New course added: ${newCourse.fullName}`);
+  }
+
+  function handleFreezeSemester() {
+    setCurrentSemester(prev => ({ ...prev, status: 'frozen' }));
+    audit('SEMESTER', `Semester ${currentSemester.label} frozen`);
+  }
+
+  async function handleResetSemester(decisions, replaceData, newLabel) {
+    // Archive current semester data into each ambassador's semesterRecords
+    const archived = ambassadors.map(a => ({
+      ...a,
+      semesterRecords: [...(a.semesterRecords || []), {
+        semesterId: currentSemester.id, semesterLabel: currentSemester.label,
+        subscribersRecruited: a.subscribers, commissionEarned: calcCommission(a.subscribers),
+        totalPaid: a.paidOut, titleAchieved: getTitle(a.subscribers).label, status: 'completed'
+      }]
+    }));
+
+    // Process each decision
+    let updated = archived.map(a => {
+      const dec = decisions[a.id];
+      if (!dec || !a.active) return a;
+      if (dec === 'continue') return { ...a, subscribers: 0, paidOut: 0, history: [], payments: [] };
+      if (dec === 'remove') return { ...a, active: false, status: 'removed' };
+      if (dec === 'replace') {
+        const rd = replaceData[a.id] || {};
+        if (rd.name) {
+          // Create new ambassador in same slot
+          const newCode = generateCode(rd.name, a.course);
+          const newPin = String(Math.floor(1000 + Math.random() * 9000));
+          hashText(newPin).then(hp => {
+            const newAmb = { id: Date.now(), name: rd.name.trim(), course: a.course, slot: a.slot, code: newCode, pin: hp,
+              subscribers: 0, paidOut: 0, active: true, vaultAccess: true, joinDate: today(), momoNumber: rd.momo || '',
+              history: [], payments: [], semesterRecords: [], noShowFlaggedAt: null, status: 'active' };
+            setAmbassadors(p => [...p, newAmb]);
+          });
+        }
+        return { ...a, active: false, status: 'replaced', subscribers: 0, paidOut: 0 };
+      }
+      return a;
+    });
+
+    setAmbassadors(updated);
+    setSemesterHistory(prev => [...prev, { id: currentSemester.id, label: currentSemester.label, archivedDate: today(), ambassadorCount: ambassadors.filter(a=>a.active).length }]);
+    setCurrentSemester({ id: 'SEM-' + Date.now(), label: newLabel, startDate: today(), status: 'active' });
+    audit('SEMESTER', `Semester reset. New semester: ${newLabel}`);
+  }
+
+  function handleImport(data) {
+    if (data.ambassadors) setAmbassadors(data.ambassadors);
+    if (data.courses) setCourses(data.courses);
+    if (data.auditLog) setAuditLog(data.auditLog);
+    if (data.currentSemester) setCurrentSemester(data.currentSemester);
+    if (data.semesterHistory) setSemesterHistory(data.semesterHistory);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('stemlab_session');
+    setFounderLoggedIn(false);
+  }
+
+  function handleAmbLogout() {
+    sessionStorage.removeItem('stemlab_amb_session');
+    setCurrentUser(null);
+    setMode('founder');
+  }
+
+  function handleFounderLogin() {
+    setFounderLoggedIn(true);
+  }
+
+  function handleAmbLogin(amb) {
+    setCurrentUser(amb);
+    setMode('ambassador');
+  }
+
+  // ── ROUTING ──
+
+  // Public join page (hash route)
+  if (hashData.page === 'join') {
+    return <JoinPage hashData={hashData} courses={courses} visits={visits} setVisits={setVisits} />;
+  }
+
+  // Ambassador portal
+  if (mode === 'ambassador') {
+    if (!currentUser) return <AmbassadorLogin ambassadors={ambassadors} onLogin={handleAmbLogin} onBack={()=>setMode('founder')} />;
+    // Sync currentUser with latest data
+    const freshUser = ambassadors.find(a => a.id === currentUser.id) || currentUser;
+    return <AmbassadorPortal currentUser={freshUser} ambassadors={ambassadors} courses={courses} onLogout={handleAmbLogout} leaderboardVisible={leaderboardVisible} />;
+  }
+
+  // Founder flow
+  if (!founderLoggedIn) {
+    return <FounderLogin onLogin={handleFounderLogin} onSwitchToAmbassador={()=>setMode('ambassador')} />;
+  }
+
+  // ── FOUNDER DASHBOARD ──
+  return (
+    <div>
+      <TopBar view={view} onNav={setView} onLogout={handleLogout} sessionMins={sessionMins} />
+
+      <div className="page">
+
+        {/* DASHBOARD — Main view with stats, alerts, ambassador list */}
+        {view === 'dashboard' && (
+          <div>
+            <AlertPanel ambassadors={ambassadors} courses={courses} visits={visits} lastBackup={lastBackup} />
+            <StatsBar ambassadors={ambassadors} />
+            <AmbassadorList ambassadors={ambassadors} visits={visits} onUpdate={handleUpdateAmbassador} onOffboard={handleOffboardAmbassador} />
+          </div>
+        )}
+
+        {/* ADD AMBASSADOR */}
+        {view === 'add' && (
+          <AddAmbassadorForm courses={courses} ambassadors={ambassadors} onAdd={handleAddAmbassador} />
+        )}
+
+        {/* CODES VIEW */}
+        {view === 'codes' && (
+          <CodesView ambassadors={ambassadors} courses={courses} />
+        )}
+
+        {/* COURSES */}
+        {view === 'courses' && (
+          <CoursesView courses={courses} ambassadors={ambassadors} onUpdateCourse={handleUpdateCourse} onAddCourse={handleAddCourse} />
+        )}
+
+        {/* LEADERBOARD */}
+        {view === 'leaderboard' && (
+          <Leaderboard ambassadors={ambassadors} currentAmbId={null} isFounder={true}
+            visible={leaderboardVisible} onToggle={()=>setLeaderboardVisible(p=>!p)} />
+        )}
+
+        {/* AUDIT LOG */}
+        {view === 'log' && (
+          <AuditLog auditLog={auditLog} />
+        )}
+
+        {/* SEMESTER CONTROL */}
+        {view === 'semester' && (
+          <SemesterControl ambassadors={ambassadors} currentSemester={currentSemester}
+            semesterHistory={semesterHistory} onFreeze={handleFreezeSemester}
+            onReset={handleResetSemester} onUpdate={handleUpdateAmbassador} />
+        )}
+
+        {/* BACKUP */}
+        {view === 'backup' && (
+          <DataManager ambassadors={ambassadors} courses={courses} currentSemester={currentSemester}
+            semesterHistory={semesterHistory} auditLog={auditLog} onImport={handleImport}
+            lastBackup={lastBackup} onBackupNow={()=>setLastBackup(Date.now())} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── MOUNT THE APP ──
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
