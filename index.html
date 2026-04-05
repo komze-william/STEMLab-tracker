@@ -640,7 +640,7 @@ const _deviceId = (() => {
 // Password is hashed with SHA-256 before storage — never stored in plain text.
 // After 5 wrong attempts, locks for 10 minutes.
 // ============================================================
-function FounderLogin({ onLogin, founderPasswordHash, onSetPasswordHash }) {
+function FounderLogin({ onLogin, founderPasswordHash, onSetPasswordHash, onSwitchToAmbassador }) {
   const isFirstTime = !founderPasswordHash;
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
